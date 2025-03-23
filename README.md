@@ -6,6 +6,8 @@ Kanalları istediğiniz gibi ekleyerek çoklu kanal izlemesi yapabilirsiniz.
 - [x] Stil dosyaları düzenlendi.
 - [x] Versiyon bilgisi eklendi.
 
+![v1.1](imaj/v1.1.png)
+
 ### v1.0
 - [x] Kanal ekleme
 - [x] Kanal silme
