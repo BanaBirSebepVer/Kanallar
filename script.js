@@ -12,6 +12,7 @@ function addVideo(videoId) {
     const videoContainer = document.createElement('div');
     videoContainer.className = 'video-container';
     videoContainer.innerHTML = `
+        <button class="remove-btn" onclick="removeVideo(this.parentElement)">×</button>
         <iframe
             src="https://www.youtube.com/embed/${videoId}"
             frameborder="0"
@@ -23,6 +24,14 @@ function addVideo(videoId) {
     videoGrid.appendChild(videoContainer);
 }
 
+function removeVideo(container) {
+    const index = videos.indexOf(container);
+    if (index > -1) {
+        videos.splice(index, 1);
+        container.remove();
+    }
+}
+
 addChannelForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const videoUrl = document.getElementById('videoUrl').value;
@@ -32,6 +41,6 @@ addChannelForm.addEventListener('submit', (e) => {
         addVideo(videoId);
         document.getElementById('videoUrl').value = '';
     } else {
-        alert('Please enter a valid YouTube URL');
+        alert('Lütfen geçerli bir YouTube URL\'si girin');
     }
 });
