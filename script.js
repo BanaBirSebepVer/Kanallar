@@ -11,10 +11,14 @@ function extractVideoId(url) {
 function addVideo(videoId) {
     const videoContainer = document.createElement('div');
     videoContainer.className = 'video-container';
+    
+    // Check if URL contains 'live' parameter
+    const embedType = videoId.toLowerCase().includes('live') ? 'live_stream' : 'embed';
+    
     videoContainer.innerHTML = `
         <button class="remove-btn" onclick="removeVideo(this.parentElement)">×</button>
         <iframe
-            src="https://www.youtube.com/embed/${videoId}"
+            src="https://www.youtube.com/${embedType}/${videoId}"
             frameborder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowfullscreen>
