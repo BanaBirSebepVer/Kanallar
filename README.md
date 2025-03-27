@@ -1,5 +1,7 @@
 # YouTube Kanalları
-Kanalları istediğiniz gibi ekleyerek çoklu kanal izlemesi yapabilirsiniz.
+Kanalları istediğiniz gibi ekleyerek çoklu kanal izlemesi yapabilirsiniz. Kullanım amaçları:
+- Medya takibi için (Farklı yayınları aynı anda izlemek)
+- Yayıncılar için (Yayınlarında tek bir ekranda farklı Youtube yayınlarını izlemek)
 
 ### v1.1
 - [x] Mobil cihazlarda kullanımı kolaylaştırmak için tasarım güncellendi.
