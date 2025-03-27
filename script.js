@@ -45,6 +45,6 @@ addChannelForm.addEventListener('submit', (e) => {
         addVideo(videoId);
         document.getElementById('videoUrl').value = '';
     } else {
-        alert('Please enter a valid YouTube URL Lütfen geçerli');
+        alert("Lütfen geçerli bir YouTube URL'si girin.");
     }
 });
