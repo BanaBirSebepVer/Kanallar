@@ -3,6 +3,10 @@ Kanalları istediğiniz gibi ekleyerek çoklu kanal izlemesi yapabilirsiniz. Kul
 - Medya takibi için (Farklı yayınları aynı anda izlemek)
 - Yayıncılar için (Yayınlarında tek bir ekranda farklı Youtube yayınlarını izlemek)
 
+### v1.2
+- [x] Çerez ile son eklenen ve silinen kanallar kaydedilir.
+- [x] Kanal eklendiğinde otomatik olarak çalışır.
+
 ### v1.1
 - [x] Mobil cihazlarda kullanımı kolaylaştırmak için tasarım güncellendi.
 - [x] Stil dosyaları düzenlendi.

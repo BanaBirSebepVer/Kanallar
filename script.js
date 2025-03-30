@@ -34,7 +34,7 @@ function addVideo(videoId, shouldSave = true) {
     videoContainer.innerHTML = `
         <button class="remove-btn" onclick="removeVideo(this.parentElement)">×</button>
         <iframe
-            src="https://www.youtube.com/${embedType}/${videoId}"
+            src="https://www.youtube.com/${embedType}/${videoId}?autoplay=1&mute=1"
             frameborder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowfullscreen>
