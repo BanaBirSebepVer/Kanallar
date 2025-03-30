@@ -14,9 +14,12 @@
 
     gtag('config', 'G-F2SS5LY6B1');
     </script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+
+
 </head>
 <body>
-    <nav class="navbar">       
+    <nav class="navbar">         
         <form id="addChannelForm">
             <input type="text" id="videoUrl" placeholder="YouTube bağlantısını ekleyin" required>
             <button type="submit">Kanal Ekle</button>
@@ -28,6 +31,13 @@
     <script src="script.js"></script>
     <footer class="footer">
         <p>© 2025 Bana Bir Sebep Ver</p>
+        <div class="theme-selector">
+            <select id="themeSelect" onchange="toggleTheme(this.value)">
+                <option value="light">🌞 Açık</option>
+                <option value="dark">🌙 Koyu</option>
+                <option value="auto">🔄 Otomatik</option>
+            </select>
+        </div> 
         <span class="version">v1.2</span>
     </footer>
 </body>

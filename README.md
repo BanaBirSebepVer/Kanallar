@@ -6,6 +6,7 @@ Kanalları istediğiniz gibi ekleyerek çoklu kanal izlemesi yapabilirsiniz. Kul
 ### v1.2
 - [x] Çerez ile son eklenen ve silinen kanallar kaydedilir.
 - [x] Kanal eklendiğinde otomatik olarak çalışır.
+- [x] Tema modu eklenmiştir. (Açık/Koyu/Otomatik)
 
 ### v1.1
 - [x] Mobil cihazlarda kullanımı kolaylaştırmak için tasarım güncellendi.
