@@ -38,7 +38,13 @@
                 <option value="auto">🔄 Otomatik</option>
             </select>
         </div> 
-        <span class="version">v1.2</span>
+        <div class="feature-toggle">
+            <select id="tabsFeatureToggle" onchange="toggleTabsFeature(this.value)">
+                <option value="off">🔴 Tabs Kapalı</option>
+                <option value="on">🟢 Tabs Açık</option>
+            </select>
+        </div>
+        <span class="version">v1.3</span>
     </footer>
 </body>
 </html>
