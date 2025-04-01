@@ -3,6 +3,10 @@ YouTube video bağlantılarını ekleyerek çoklu kanal izlemesi yapabilirsiniz.
 - Medya takibi için (Farklı yayınları aynı anda izlemek)
 - Yayıncılar için (Yayınlarında tek bir ekranda farklı Youtube yayınlarını izlemek)
 
+
+### v1.2.1
+- [x] YouTube video URL'lerinin farklı formatlarını destekler.
+
 ### v1.2
 - [x] Çerez ile son eklenen ve silinen kanallar kaydedilir.
 - [x] Kanal eklendiğinde otomatik olarak çalışır.

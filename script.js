@@ -64,9 +64,23 @@ function loadVideosFromStorage() {
 }
 // YouTube video ID'sini URL'den çıkartmak için kullanılan fonksiyon. Bu fonksiyon, YouTube URL'sinden video ID'sini alır.
 function extractVideoId(url) {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
+    // Çoklu YouTube URL formatının desteklenmesi için düzenli ifadeler kullanılır
+    // Bu ifadeler, YouTube'un standart URL formatlarını ve bazı özel durumları kapsar.
+    const patterns = [
+        /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/,
+        /^.*(?:youtube.com\/live\/)([^#&?]*).*/,  // Canlı yayın formatı
+        /^.*(?:youtube.com\/shorts\/)([^#&?]*).*/  // YouTube Shorts formatı
+    ];
+
+    for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match && match[2]?.length === 11) {
+            return match[2];
+        } else if (match && match[1]?.length === 11) {
+            return match[1];
+        }
+    }
+    return null;
 }
 // Video ekleme fonksiyonu. Bu fonksiyon, video ID'sini alır ve videoyu ekler.
 function addVideo(videoId, shouldSave = true) {
@@ -110,7 +124,7 @@ function removeVideo(container) {
             saveVideosToStorage(videos);
         }
     } catch (error) {
-        console.error('Error removing video:', error);
+        console.error('Video kaldırırken hata oluştu:', error);
     }
 }
 // Video bağlantılarını kontrol etme fonksiyonu. Bu fonksiyon, video bağlantılarının geçerli olup olmadığını kontrol eder.
