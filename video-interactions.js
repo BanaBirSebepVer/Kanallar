@@ -25,49 +25,12 @@ const VideoInteractions = (function() {
     let initialLeft = 0;
     let initialTop = 0;
     
-    // Public API
-    return {
-        // Modülü başlat
-        init: function(videosArray, grid, saveCallback, enabled = true) {
-            videos = videosArray;
-            videoGrid = grid;
-            saveVideosCallback = saveCallback;
-            isEnabled = enabled;
-            
-            // Durumu al
-            const featureState = localStorage.getItem('tabsFeature') || 'off';
-            isEnabled = featureState === 'on';
-            
-            // Pencere boyutu değişikliğini izle
-            window.addEventListener('resize', this.handleWindowResize);
-            
-            // Mevcut durum bilgisini güncelle
-            if (document.getElementById('tabsFeatureToggle')) {
-                document.getElementById('tabsFeatureToggle').value = featureState;
-            }
-        },
-        
-        // Video etkileşimlerini etkinleştir
-        enableInteractions: function(videoContainer) {
-            if (!videoContainer || videoContainer.hasInteractionsEnabled) return;
-            
-            // Pozisyon ve boyut stil eklemeleri - bu kritik
-            videoContainer.style.position = 'absolute';
-            videoContainer.style.paddingBottom = '0';
-            
-            // İlk pozisyon hesapla
-            const containerRect = videoContainer.getBoundingClientRect();
-            const gridRect = videoGrid.getBoundingClientRect();
-            const left = videoContainer.style.left || '0';
-            const top = videoContainer.style.top || '0';
-            
-            videoContainer.style.left = left;
-            videoContainer.style.top = top;
-            
-            // Header ekle (eğer yoksa)
-            let header = videoContainer.querySelector('.video-header');
-            if (!header) {
-                header = document.createElement('div');
+    // Yardımcı fonksiyonlar
+    const applyConstraints = (value, min, max) => Math.min(Math.max(value, min), max);
+    
+    // Header oluşturma fonksiyonu
+    const createHeader = (videoContainer) => {
+        const header = document.createElement('div');
                 header.className = 'video-header';
                 header.innerHTML = '<div class="window-controls"><span class="window-control close"></span><span class="window-control minimize"></span><span class="window-control maximize"></span></div>';
                 videoContainer.prepend(header);
@@ -77,7 +40,6 @@ const VideoInteractions = (function() {
                 if (closeButton) {
                     closeButton.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        // Pencere kapama işlevi - videoyu kaldır
                         const container = e.target.closest('.video-container');
                         if (container && typeof window.removeVideo === 'function') {
                             window.removeVideo(container);
@@ -85,13 +47,13 @@ const VideoInteractions = (function() {
                     });
                 }
                 
+        // Maksimize butonu
                 const maximizeButton = header.querySelector('.window-control.maximize');
                 if (maximizeButton) {
                     maximizeButton.addEventListener('click', (e) => {
                         e.stopPropagation();
                         const container = e.target.closest('.video-container');
                         
-                        // Eğer zaten maksimize edilmişse normal boyuta döndür
                         if (container.classList.contains('maximized')) {
                             container.classList.remove('maximized');
                             container.style.width = container.dataset.prevWidth || '400px';
@@ -114,19 +76,17 @@ const VideoInteractions = (function() {
                             container.style.top = '0';
                         }
                         
-                        if (saveVideosCallback) {
-                            saveVideosCallback(videos);
-                        }
+                saveVideosCallback?.(videos);
                     });
                 }
                 
+        // Minimize butonu
                 const minimizeButton = header.querySelector('.window-control.minimize');
                 if (minimizeButton) {
                     minimizeButton.addEventListener('click', (e) => {
                         e.stopPropagation();
                         const container = e.target.closest('.video-container');
                         
-                        // Minimize işlevi - şimdilik sadece küçült
                         if (container.classList.contains('minimized')) {
                             container.classList.remove('minimized');
                             container.style.height = container.dataset.prevHeight || '260px';
@@ -136,34 +96,321 @@ const VideoInteractions = (function() {
                             container.style.height = '36px'; // Sadece başlık göster
                         }
                         
-                        if (saveVideosCallback) {
-                            saveVideosCallback(videos);
-                        }
-                    });
+                saveVideosCallback?.(videos);
+            });
+        }
+        
+        return header;
+    };
+    
+    // Resize handle oluşturma fonksiyonu
+    const createResizeHandle = (videoContainer) => {
+        const resizeHandle = document.createElement('div');
+        resizeHandle.className = 'resize-handle';
+        resizeHandle.innerHTML = '<div class="resize-icon"><span></span><span></span><span></span></div>';
+        videoContainer.appendChild(resizeHandle);
+        return resizeHandle;
+    };
+    
+    // Resize kenarlarını oluşturma fonksiyonu
+    const createResizeEdges = (videoContainer) => {
+        const rightEdge = document.createElement('div');
+        rightEdge.className = 'edge-resize edge-right';
+        
+        const bottomEdge = document.createElement('div');
+        bottomEdge.className = 'edge-resize edge-bottom';
+        
+        videoContainer.appendChild(rightEdge);
+        videoContainer.appendChild(bottomEdge);
+        
+        return { rightEdge, bottomEdge };
+    };
+    
+    // ResizeObserver kurulum fonksiyonu
+    const setupResizeObserver = (videoContainer) => {
+        if (!isEnabled) return null;
+        
+        let isResizing = false;
+        let resizeMode = 'none';
+        let size = { width: videoContainer.offsetWidth, height: videoContainer.offsetHeight };
+        let rafId = null;
+        let lastResizeTime = 0;
+        const THROTTLE_DELAY = 16; // ~60fps
+        
+        const resizeObserver = new ResizeObserver(entries => {
+            if (!isEnabled) return;
+            
+            const entry = entries[0];
+            const now = performance.now();
+            
+            // Throttle uygula
+            if (now - lastResizeTime < THROTTLE_DELAY) {
+                if (rafId) cancelAnimationFrame(rafId);
+                rafId = requestAnimationFrame(() => handleResize(entry));
+                return;
+            }
+            
+            lastResizeTime = now;
+            handleResize(entry);
+        });
+        
+        // Boyut değişikliğini işle
+        function handleResize(entry) {
+            if (!isEnabled) return;
+            
+            const newWidth = entry.contentRect.width;
+            const newHeight = entry.contentRect.height;
+            
+            // Sınır kontrolü
+            let widthChanged = false;
+            let heightChanged = false;
+            
+            if (newWidth < VideoConfig.MIN_WIDTH) {
+                videoContainer.style.width = `${VideoConfig.MIN_WIDTH}px`;
+                widthChanged = true;
+            } else if (newWidth > VideoConfig.MAX_WIDTH) {
+                videoContainer.style.width = `${VideoConfig.MAX_WIDTH}px`;
+                widthChanged = true;
+            }
+            
+            if (newHeight < VideoConfig.MIN_HEIGHT) {
+                videoContainer.style.height = `${VideoConfig.MIN_HEIGHT}px`;
+                heightChanged = true;
+            } else if (newHeight > VideoConfig.MAX_HEIGHT) {
+                videoContainer.style.height = `${VideoConfig.MAX_HEIGHT}px`;
+                heightChanged = true;
+            }
+            
+            // Sınır kontrolünden sonra işleme devam et
+            if (widthChanged || heightChanged) return;
+            
+            if (newWidth !== size.width || newHeight !== size.height) {
+                if (!isResizing) {
+                    isResizing = true;
+                    videoContainer.classList.add('resizing');
+                    
+                    if (resizeMode === 'right') {
+                        videoContainer.classList.add('resize-x');
+                    } else if (resizeMode === 'bottom') {
+                        videoContainer.classList.add('resize-y');
+                    }
                 }
+                
+                size.width = newWidth;
+                size.height = newHeight;
+                
+                clearTimeout(videoContainer.resizeTimeout);
+                videoContainer.resizeTimeout = setTimeout(() => {
+                    isResizing = false;
+                    videoContainer.classList.remove('resizing', 'resize-x', 'resize-y');
+                    resizeMode = 'none';
+                    saveVideosCallback?.(videos);
+                }, 300);
+            }
+        }
+        
+        resizeObserver.observe(videoContainer);
+        return resizeObserver;
+    };
+    
+    // Resize handle için olay dinleyicileri ekle
+    const setupResizeHandlers = (videoContainer, resizeHandle) => {
+        if (!resizeHandle || !isEnabled) return;
+        
+        // Fare sürükleme için işleyici
+        const setupMouseResize = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const resizeMode = 'corner';
+            let isResizing = true;
+            videoContainer.classList.add('resizing');
+            
+            const rect = videoContainer.getBoundingClientRect();
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const startWidth = rect.width;
+            const startHeight = rect.height;
+            let rafId = null;
+            
+            // Hareket olayı
+            function handleResizeMove(e) {
+                if (!isResizing || !isEnabled) return;
+                
+                if (rafId) cancelAnimationFrame(rafId);
+                
+                rafId = requestAnimationFrame(() => {
+                    const newWidth = applyConstraints(
+                        startWidth + (e.clientX - startX),
+                        VideoConfig.MIN_WIDTH,
+                        VideoConfig.MAX_WIDTH
+                    );
+                    
+                    const newHeight = applyConstraints(
+                        startHeight + (e.clientY - startY),
+                        VideoConfig.MIN_HEIGHT,
+                        VideoConfig.MAX_HEIGHT
+                    );
+                    
+                    videoContainer.style.width = `${newWidth}px`;
+                    videoContainer.style.height = `${newHeight}px`;
+                });
+            }
+            
+            // Bırakma olayı
+            function handleResizeUp() {
+                if (isResizing) {
+                    isResizing = false;
+                    videoContainer.classList.remove('resizing');
+                    
+                    document.removeEventListener('mousemove', handleResizeMove);
+                    document.removeEventListener('mouseup', handleResizeUp);
+                    
+                    saveVideosCallback?.(videos);
+                }
+            }
+            
+            document.addEventListener('mousemove', handleResizeMove);
+            document.addEventListener('mouseup', handleResizeUp);
+        };
+        
+        // Dokunmatik sürükleme için işleyici
+        const setupTouchResize = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            let isResizing = true;
+            videoContainer.classList.add('resizing');
+            
+            const rect = videoContainer.getBoundingClientRect();
+            const touch = e.touches[0];
+            const startX = touch.clientX;
+            const startY = touch.clientY;
+            const startWidth = rect.width;
+            const startHeight = rect.height;
+            let rafId = null;
+            
+            function handleResizeTouchMove(e) {
+                if (!isResizing || !isEnabled) return;
+                
+                if (rafId) cancelAnimationFrame(rafId);
+                
+                rafId = requestAnimationFrame(() => {
+                    const touch = e.touches[0];
+                    
+                    const newWidth = applyConstraints(
+                        startWidth + (touch.clientX - startX),
+                        VideoConfig.MIN_WIDTH,
+                        VideoConfig.MAX_WIDTH
+                    );
+                    
+                    const newHeight = applyConstraints(
+                        startHeight + (touch.clientY - startY),
+                        VideoConfig.MIN_HEIGHT,
+                        VideoConfig.MAX_HEIGHT
+                    );
+                    
+                    videoContainer.style.width = `${newWidth}px`;
+                    videoContainer.style.height = `${newHeight}px`;
+                });
+            }
+            
+            function handleResizeTouchEnd() {
+                if (isResizing) {
+                    isResizing = false;
+                    videoContainer.classList.remove('resizing');
+                    
+                    document.removeEventListener('touchmove', handleResizeTouchMove);
+                    document.removeEventListener('touchend', handleResizeTouchEnd);
+                    
+                    saveVideosCallback?.(videos);
+                }
+            }
+            
+            document.addEventListener('touchmove', handleResizeTouchMove);
+            document.addEventListener('touchend', handleResizeTouchEnd);
+        };
+        
+        // Event dinleyicileri ekle
+        resizeHandle.addEventListener('mousedown', setupMouseResize);
+        resizeHandle.addEventListener('touchstart', setupTouchResize);
+    };
+    
+    // Public API
+    return {
+        // Modülü başlat
+        init(videosArray, grid, saveCallback, enabled = true) {
+            videos = videosArray;
+            videoGrid = grid;
+            saveVideosCallback = saveCallback;
+            
+            // Durumu al
+            const featureState = localStorage.getItem('tabsFeature') || 'off';
+            isEnabled = featureState === 'on';
+            
+            // Pencere boyutu değişikliğini izle
+            window.addEventListener('resize', this.handleWindowResize);
+            
+            // Mevcut durum bilgisini güncelle ve toggle olay dinleyici ekle
+            const toggle = document.getElementById('tabsFeatureToggle');
+            if (toggle) {
+                toggle.value = featureState;
+                
+                // Toggle değişiklik olayını dinle
+                toggle.addEventListener('change', (e) => {
+                    const newValue = e.target.value;
+                    localStorage.setItem('tabsFeature', newValue);
+                    
+                    // Eğer 'off' seçildiyse sayfayı yeniden yükle
+                    if (newValue === 'off') {
+                        window.location.reload();
+                    } else {
+                        // 'on' seçildiyse, sadece durumu güncelle
+                        isEnabled = true;
+                        this.setEnabled(true);
+                    }
+                });
+            }
+        },
+        
+        // Video etkileşimlerini etkinleştir
+        enableInteractions(videoContainer) {
+            if (!videoContainer || videoContainer.hasInteractionsEnabled) return;
+            
+            // Pozisyon ve boyut stil eklemeleri
+            videoContainer.style.position = 'absolute';
+            videoContainer.style.paddingBottom = '0';
+            
+            // İlk pozisyon hesapla ve ayarla
+            videoContainer.style.left = videoContainer.style.left || '0';
+            videoContainer.style.top = videoContainer.style.top || '0';
+            
+            // Header ekle (eğer yoksa)
+            let header = videoContainer.querySelector('.video-header');
+            if (!header) {
+                header = createHeader(videoContainer);
+                
+                // Sürükleme işlevini ekle
+                header.addEventListener('mousedown', this.startDrag.bind(this));
+                header.addEventListener('touchstart', this.startDragTouch.bind(this));
             }
             
             // Resize handle ekle
             let resizeHandle = videoContainer.querySelector('.resize-handle');
             if (!resizeHandle) {
-                resizeHandle = document.createElement('div');
-                resizeHandle.className = 'resize-handle';
-                resizeHandle.innerHTML = '<div class="resize-icon"><span></span><span></span><span></span></div>';
-                videoContainer.appendChild(resizeHandle);
+                resizeHandle = createResizeHandle(videoContainer);
             }
-            
-            // Sürükleme işlevini ekle
-            header.addEventListener('mousedown', this.startDrag.bind(this));
-            header.addEventListener('touchstart', this.startDragTouch.bind(this));
             
             // Aktif video işaretleme
             videoContainer.addEventListener('mousedown', this.activateVideo);
             videoContainer.addEventListener('touchstart', this.activateVideo);
             
-            // Boyut değişimi izleme ve kaydetme işlevi
-            this.setupResizeMonitoring(videoContainer);
+            // Resize kenarları ve izleme kurulumu
+            createResizeEdges(videoContainer);
+            setupResizeHandlers(videoContainer, resizeHandle);
+            videoContainer.resizeObserver = setupResizeObserver(videoContainer);
             
-            // Container'dan no-interactions sınıfını kaldır
+            // Container sınıflarını güncelle
             videoContainer.classList.remove('no-interactions');
             videoContainer.classList.add('app-window');
             
@@ -172,54 +419,45 @@ const VideoInteractions = (function() {
         },
         
         // Video etkileşimlerini devre dışı bırak
-        disableInteractions: function(videoContainer) {
+        disableInteractions(videoContainer) {
             if (!videoContainer || !videoContainer.hasInteractionsEnabled) return;
             
             // Temizlik işlemlerini yap
             this.cleanupVideoResources(videoContainer);
             
-            // Container'a no-interactions sınıfını ekle
+            // Container sınıflarını güncelle
             videoContainer.classList.add('no-interactions');
             videoContainer.classList.remove('app-window');
-            
-            // Resize handle ve header'ı kaldır
-            const header = videoContainer.querySelector('.video-header');
-            const resizeHandle = videoContainer.querySelector('.resize-handle');
-            
-            if (header) header.remove();
-            if (resizeHandle) resizeHandle.remove();
             
             // İşaretçiyi kaldır
             videoContainer.hasInteractionsEnabled = false;
         },
         
         // Etkileşim durumunu değiştir
-        setEnabled: function(enabled) {
+        setEnabled(enabled) {
             isEnabled = enabled;
             
-            if (videos && videos.length > 0) {
+            if (videos?.length > 0) {
                 videos.forEach(container => {
-                    if (enabled) {
-                        this.enableInteractions(container);
-                    } else {
-                        this.disableInteractions(container);
-                    }
+                    enabled ? this.enableInteractions(container) : this.disableInteractions(container);
                 });
             }
         },
         
         // Etkileşim durumunu döndür
-        isEnabled: function() {
+        isEnabled() {
             return isEnabled;
         },
         
         // Video etkileşimlerini ayarla (geriye uyumluluk için)
-        setupVideoInteractions: function(videoContainer) {
+        setupVideoInteractions(videoContainer) {
             this.enableInteractions(videoContainer);
         },
         
         // Pencere boyut değişimlerini yönet
-        handleWindowResize: function() {
+        handleWindowResize() {
+            if (!videos?.length) return;
+            
             // Ekran boyutuna göre dinamik sınırlar belirle
             const vw = window.innerWidth;
             const vh = window.innerHeight;
@@ -233,7 +471,7 @@ const VideoInteractions = (function() {
                 const rect = container.getBoundingClientRect();
                 const gridRect = videoGrid.getBoundingClientRect();
                 
-                // Taşma kontrolü
+                // Taşma ve boyut kontrolü
                 if (rect.right > gridRect.right) {
                     container.style.left = `${gridRect.width - rect.width}px`;
                 }
@@ -242,7 +480,6 @@ const VideoInteractions = (function() {
                     container.style.top = `${gridRect.height - rect.height}px`;
                 }
                 
-                // Çok büyük videoları ekrana sığdır
                 if (rect.width > dynamicMaxWidth) {
                     container.style.width = `${dynamicMaxWidth}px`;
                 }
@@ -258,23 +495,19 @@ const VideoInteractions = (function() {
         },
         
         // Videoyu aktif hale getir (öne getir)
-        activateVideo: function(e) {
-            // Resize handle veya header tıklamalarında zaten işlem yapılacak
+        activateVideo(e) {
             if (e.target.classList.contains('resize-handle') || 
                 e.target.classList.contains('video-header') || 
                 e.target.classList.contains('remove-btn')) {
                 return;
             }
             
-            // Tüm videoların active sınıfını kaldır
             videos.forEach(v => v.classList.remove('active'));
-            
-            // Bu videoyu aktif yap
             this.classList.add('active');
         },
         
         // Sürüklemeyi başlatma fonksiyonu
-        startDrag: function(e) {
+        startDrag(e) {
             if (!isEnabled) return;
             
             e.preventDefault();
@@ -291,7 +524,7 @@ const VideoInteractions = (function() {
             initialTop = parseFloat(currentDragElement.style.top) || 0;
             
             // Absolute pozisyon kontrolü
-            if (!currentDragElement.style.position || currentDragElement.style.position !== 'absolute') {
+            if (currentDragElement.style.position !== 'absolute') {
                 currentDragElement.style.position = 'absolute';
             }
             
@@ -305,7 +538,7 @@ const VideoInteractions = (function() {
         },
         
         // Dokunmatik cihazlar için sürüklemeyi başlatma fonksiyonu
-        startDragTouch: function(e) {
+        startDragTouch(e) {
             if (!isEnabled) return;
             
             e.preventDefault();
@@ -322,7 +555,7 @@ const VideoInteractions = (function() {
             initialTop = parseFloat(currentDragElement.style.top) || 0;
             
             // Absolute pozisyon kontrolü
-            if (!currentDragElement.style.position || currentDragElement.style.position !== 'absolute') {
+            if (currentDragElement.style.position !== 'absolute') {
                 currentDragElement.style.position = 'absolute';
             }
             
@@ -335,28 +568,28 @@ const VideoInteractions = (function() {
             document.addEventListener('touchend', this.stopDragTouch.bind(this));
         },
         
-        // Sürükleme fonksiyonu
-        dragElement: function(e) {
-            if (!isDragging || !isEnabled) return;
+        // Sürükleme fonksiyonu (fare ve dokunmatik ortak kodlar)
+        dragCommon(clientX, clientY) {
+            if (!isDragging || !isEnabled || !currentDragElement) return;
             
             // Yeni konumu hesapla
-            const dx = e.clientX - initialX;
-            const dy = e.clientY - initialY;
+            const dx = clientX - initialX;
+            const dy = clientY - initialY;
             
-            // Container sınırları
+            // Container sınırları ve video element boyutları
             const containerRect = videoGrid.getBoundingClientRect();
-            
-            // Video element boyutları
             const videoRect = currentDragElement.getBoundingClientRect();
             
-            // Sınırları belirle (containerın dışına çıkmasını engelle)
-            const newLeft = Math.min(
-                Math.max(initialLeft + dx, 0),
+            // Sınırları belirle ve uygula
+            const newLeft = applyConstraints(
+                initialLeft + dx,
+                0,
                 containerRect.width - videoRect.width
             );
             
-            const newTop = Math.min(
-                Math.max(initialTop + dy, 0),
+            const newTop = applyConstraints(
+                initialTop + dy,
+                0,
                 containerRect.height - videoRect.height
             );
             
@@ -365,92 +598,60 @@ const VideoInteractions = (function() {
             currentDragElement.style.top = `${newTop}px`;
         },
         
-        // Dokunmatik cihazlar için sürükleme fonksiyonu
-        dragElementTouch: function(e) {
-            if (!isDragging || !isEnabled) return;
-            
-            // Yeni konumu hesapla
-            const dx = e.touches[0].clientX - initialX;
-            const dy = e.touches[0].clientY - initialY;
-            
-            // Container sınırları
-            const containerRect = videoGrid.getBoundingClientRect();
-            
-            // Video element boyutları
-            const videoRect = currentDragElement.getBoundingClientRect();
-            
-            // Sınırları belirle (containerın dışına çıkmasını engelle)
-            const newLeft = Math.min(
-                Math.max(initialLeft + dx, 0),
-                containerRect.width - videoRect.width
-            );
-            
-            const newTop = Math.min(
-                Math.max(initialTop + dy, 0),
-                containerRect.height - videoRect.height
-            );
-            
-            // Container'ın konumunu güncelle
-            currentDragElement.style.left = `${newLeft}px`;
-            currentDragElement.style.top = `${newTop}px`;
+        // Fare sürükleme fonksiyonu
+        dragElement(e) {
+            this.dragCommon(e.clientX, e.clientY);
         },
         
-        // Sürüklemeyi durdurma fonksiyonu
-        stopDrag: function() {
-            if (isDragging && isEnabled) {
+        // Dokunmatik sürükleme fonksiyonu
+        dragElementTouch(e) {
+            this.dragCommon(e.touches[0].clientX, e.touches[0].clientY);
+        },
+        
+        // Sürüklemeyi durdurma fonksiyonu (ortak)
+        stopDragCommon() {
+            if (isDragging && isEnabled && currentDragElement) {
                 currentDragElement.classList.remove('dragging');
                 isDragging = false;
-                
-                // Event listener'ları kaldır
-                document.removeEventListener('mousemove', this.dragElement.bind(this));
-                document.removeEventListener('mouseup', this.stopDrag.bind(this));
-                
-                // Video konumlarını kaydet
-                saveVideosCallback(videos);
+                saveVideosCallback?.(videos);
             }
         },
         
-        // Dokunmatik cihazlar için sürüklemeyi durdurma fonksiyonu
-        stopDragTouch: function() {
-            if (isDragging && isEnabled) {
-                currentDragElement.classList.remove('dragging');
-                isDragging = false;
-                
-                // Event listener'ları kaldır
+        // Fare sürüklemeyi durdurma
+        stopDrag() {
+            this.stopDragCommon();
+            document.removeEventListener('mousemove', this.dragElement.bind(this));
+            document.removeEventListener('mouseup', this.stopDrag.bind(this));
+        },
+        
+        // Dokunmatik sürüklemeyi durdurma
+        stopDragTouch() {
+            this.stopDragCommon();
                 document.removeEventListener('touchmove', this.dragElementTouch.bind(this));
                 document.removeEventListener('touchend', this.stopDragTouch.bind(this));
-                
-                // Video konumlarını kaydet
-                saveVideosCallback(videos);
-            }
         },
         
         // Boyut değişimi tamamlandığında video konumunu kaydet
-        saveVideoSizeAndPosition: function() {
+        saveVideoSizeAndPosition() {
             if (isEnabled) {
-                saveVideosCallback(videos);
+                saveVideosCallback?.(videos);
             }
         },
         
         // Video kaynakları temizle
-        cleanupVideoResources: function(container) {
+        cleanupVideoResources(container) {
             // ResizeObserver'ı temizle
             if (container.resizeObserver) {
                 container.resizeObserver.disconnect();
                 delete container.resizeObserver;
             }
             
-            // Event listener'ları temizle
-            const header = container.querySelector('.video-header');
-            const resizeHandle = container.querySelector('.resize-handle');
-            const rightEdge = container.querySelector('.edge-right');
-            const bottomEdge = container.querySelector('.edge-bottom');
-            
-            // Tüm özel eklenen elementleri temizle
-            if (header) header.remove();
-            if (resizeHandle) resizeHandle.remove();
-            if (rightEdge) rightEdge.remove();
-            if (bottomEdge) bottomEdge.remove();
+            // Özel elementleri kaldır
+            ['video-header', 'resize-handle', 'edge-right', 'edge-bottom']
+                .forEach(className => {
+                    const element = container.querySelector(`.${className}`);
+                    if (element) element.remove();
+                });
             
             // Timeout'ları temizle
             if (container.resizeTimeout) {
@@ -468,238 +669,6 @@ const VideoInteractions = (function() {
             if (!tabsFeatureActive) {
                 container.style.paddingBottom = '56.25%';
             }
-        },
-        
-        // Her videoyu resize izlemeyle başlat
-        setupResizeMonitoring: function(videoContainer) {
-            if (!isEnabled) return;
-            
-            let isResizing = false;
-            let resizeMode = 'none'; // 'none', 'corner', 'right', 'bottom'
-            let size = { width: videoContainer.offsetWidth, height: videoContainer.offsetHeight };
-            let rafId = null;
-            let lastResizeTime = 0;
-            const THROTTLE_DELAY = 16; // ~60fps için uygun throttle değeri
-            
-            // Kenar resize kontrol elemanlarını ekle
-            const rightEdge = document.createElement('div');
-            rightEdge.className = 'edge-resize edge-right';
-            
-            const bottomEdge = document.createElement('div');
-            bottomEdge.className = 'edge-resize edge-bottom';
-            
-            videoContainer.appendChild(rightEdge);
-            videoContainer.appendChild(bottomEdge);
-            
-            // Resize handle için event listener'lar
-            const resizeHandle = videoContainer.querySelector('.resize-handle');
-            
-            if (resizeHandle) {
-                // Mouse sürükleme için
-                resizeHandle.addEventListener('mousedown', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    // Resize işlemini başlat
-                    resizeMode = 'corner';
-                    isResizing = true;
-                    videoContainer.classList.add('resizing');
-                    
-                    const rect = videoContainer.getBoundingClientRect();
-                    const startX = e.clientX;
-                    const startY = e.clientY;
-                    const startWidth = rect.width;
-                    const startHeight = rect.height;
-                    
-                    // Hareket olayı
-                    function handleResizeMove(e) {
-                        if (!isResizing || !isEnabled) return;
-                        
-                        if (rafId) {
-                            cancelAnimationFrame(rafId);
-                        }
-                        
-                        rafId = requestAnimationFrame(() => {
-                            let newWidth = startWidth + (e.clientX - startX);
-                            let newHeight = startHeight + (e.clientY - startY);
-                            
-                            // Sınırlamaları uygula
-                            newWidth = Math.min(Math.max(newWidth, VideoConfig.MIN_WIDTH), VideoConfig.MAX_WIDTH);
-                            newHeight = Math.min(Math.max(newHeight, VideoConfig.MIN_HEIGHT), VideoConfig.MAX_HEIGHT);
-                            
-                            videoContainer.style.width = `${newWidth}px`;
-                            videoContainer.style.height = `${newHeight}px`;
-                        });
-                    }
-                    
-                    // Bırakma olayı
-                    function handleResizeUp() {
-                        if (isResizing) {
-                            isResizing = false;
-                            videoContainer.classList.remove('resizing');
-                            resizeMode = 'none';
-                            
-                            document.removeEventListener('mousemove', handleResizeMove);
-                            document.removeEventListener('mouseup', handleResizeUp);
-                            
-                            // Videoyu kaydet
-                            saveVideosCallback(videos);
-                        }
-                    }
-                    
-                    document.addEventListener('mousemove', handleResizeMove);
-                    document.addEventListener('mouseup', handleResizeUp);
-                });
-                
-                // Dokunmatik ekranlar için
-                resizeHandle.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    resizeMode = 'corner';
-                    isResizing = true;
-                    videoContainer.classList.add('resizing');
-                    
-                    const rect = videoContainer.getBoundingClientRect();
-                    const touch = e.touches[0];
-                    const startX = touch.clientX;
-                    const startY = touch.clientY;
-                    const startWidth = rect.width;
-                    const startHeight = rect.height;
-                    
-                    function handleResizeTouchMove(e) {
-                        if (!isResizing || !isEnabled) return;
-                        
-                        if (rafId) {
-                            cancelAnimationFrame(rafId);
-                        }
-                        
-                        rafId = requestAnimationFrame(() => {
-                            const touch = e.touches[0];
-                            let newWidth = startWidth + (touch.clientX - startX);
-                            let newHeight = startHeight + (touch.clientY - startY);
-                            
-                            // Sınırlamaları uygula
-                            newWidth = Math.min(Math.max(newWidth, VideoConfig.MIN_WIDTH), VideoConfig.MAX_WIDTH);
-                            newHeight = Math.min(Math.max(newHeight, VideoConfig.MIN_HEIGHT), VideoConfig.MAX_HEIGHT);
-                            
-                            videoContainer.style.width = `${newWidth}px`;
-                            videoContainer.style.height = `${newHeight}px`;
-                        });
-                    }
-                    
-                    function handleResizeTouchEnd() {
-                        if (isResizing) {
-                            isResizing = false;
-                            videoContainer.classList.remove('resizing');
-                            resizeMode = 'none';
-                            
-                            document.removeEventListener('touchmove', handleResizeTouchMove);
-                            document.removeEventListener('touchend', handleResizeTouchEnd);
-                            
-                            // Videoyu kaydet
-                            saveVideosCallback(videos);
-                        }
-                    }
-                    
-                    document.addEventListener('touchmove', handleResizeTouchMove);
-                    document.addEventListener('touchend', handleResizeTouchEnd);
-                });
-            }
-            
-            // Boyut değişimini izlemek için ResizeObserver
-            const resizeObserver = new ResizeObserver(entries => {
-                if (!isEnabled) return;
-                
-                const entry = entries[0];
-                const now = performance.now();
-                
-                // Throttle uygula - çok hızlı resize işlemlerini sınırla
-                if (now - lastResizeTime < THROTTLE_DELAY) {
-                    // Eğer zaten bekleyen bir animasyon çerçevesi varsa iptal et
-                    if (rafId) {
-                        cancelAnimationFrame(rafId);
-                    }
-                    
-                    // Yeni bir animasyon çerçevesi planla
-                    rafId = requestAnimationFrame(() => handleResize(entry));
-                    return;
-                }
-                
-                // Doğrudan işle
-                lastResizeTime = now;
-                handleResize(entry);
-            });
-            
-            // Boyut değişikliğini işle
-            function handleResize(entry) {
-                if (!isEnabled) return;
-                
-                // Eğer boyut değiştiyse
-                const newWidth = entry.contentRect.width;
-                const newHeight = entry.contentRect.height;
-                
-                // Minimum ve maksimum sınırlara uygun olduğunu kontrol et
-                let widthChanged = false;
-                let heightChanged = false;
-                
-                if (newWidth < VideoConfig.MIN_WIDTH) {
-                    videoContainer.style.width = `${VideoConfig.MIN_WIDTH}px`;
-                    widthChanged = true;
-                } else if (newWidth > VideoConfig.MAX_WIDTH) {
-                    videoContainer.style.width = `${VideoConfig.MAX_WIDTH}px`;
-                    widthChanged = true;
-                }
-                
-                if (newHeight < VideoConfig.MIN_HEIGHT) {
-                    videoContainer.style.height = `${VideoConfig.MIN_HEIGHT}px`;
-                    heightChanged = true;
-                } else if (newHeight > VideoConfig.MAX_HEIGHT) {
-                    videoContainer.style.height = `${VideoConfig.MAX_HEIGHT}px`;
-                    heightChanged = true;
-                }
-                
-                // Eğer sınırları aşan bir durum varsa yeniden kontrol et ve dön
-                if (widthChanged || heightChanged) {
-                    return;
-                }
-                
-                // Eğer boyut değiştiyse ve sınırlar içindeyse
-                if (newWidth !== size.width || newHeight !== size.height) {
-                    if (!isResizing) {
-                        isResizing = true;
-                        videoContainer.classList.add('resizing');
-                        
-                        // Resize moduna göre cursor'ı ayarla
-                        if (resizeMode === 'right') {
-                            videoContainer.classList.add('resize-x');
-                        } else if (resizeMode === 'bottom') {
-                            videoContainer.classList.add('resize-y');
-                        }
-                    }
-                    
-                    // Boyut bilgisini güncelle
-                    size.width = newWidth;
-                    size.height = newHeight;
-                    
-                    // Boyut değişimi biraz duraklar duraklamaz kaydet ve işaretlemeyi temizle
-                    clearTimeout(videoContainer.resizeTimeout);
-                    videoContainer.resizeTimeout = setTimeout(() => {
-                        isResizing = false;
-                        videoContainer.classList.remove('resizing');
-                        videoContainer.classList.remove('resize-x');
-                        videoContainer.classList.remove('resize-y');
-                        resizeMode = 'none';
-                        saveVideosCallback(videos);
-                    }, 300);
-                }
-            }
-            
-            // İzlemeyi başlat
-            resizeObserver.observe(videoContainer);
-            
-            // Videoyu temizlerken izlemeyi de temizle
-            videoContainer.resizeObserver = resizeObserver;
         }
     };
 })();
@@ -707,8 +676,24 @@ const VideoInteractions = (function() {
 // Sayfa yüklendiğinde etkileşim durumunu kontrol et
 window.addEventListener('DOMContentLoaded', () => {
     const featureState = localStorage.getItem('tabsFeature') || 'off';
-    if (document.getElementById('tabsFeatureToggle')) {
-        document.getElementById('tabsFeatureToggle').value = featureState;
+    const toggle = document.getElementById('tabsFeatureToggle');
+    if (toggle) {
+        toggle.value = featureState;
+        
+        // Toggle değişiklik olayını dinle - DOMContentLoaded'da da ekle
+        // Bu sayede sayfa yüklendiğinde var olan toggle için de dinleyici eklenir
+        toggle.addEventListener('change', (e) => {
+            const newValue = e.target.value;
+            localStorage.setItem('tabsFeature', newValue);
+            
+            // Eğer 'off' seçildiyse sayfayı yeniden yükle
+            if (newValue === 'off') {
+                window.location.reload();
+            } else {
+                // 'on' seçildiyse, sadece durumu güncelle
+                VideoInteractions.setEnabled(true);
+            }
+        });
     }
 });
 
