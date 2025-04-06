@@ -1,148 +1,83 @@
-// KanallarYoutube - YouTube Video Embedder
-// Kodları ve içerikleri özgün olarak oluşturulmuştur. Kodlar İngilizce olarak yazılmıştır. Açıklamalar Türkçe olarak verilmiştir.
-// Bu script, kullanıcıların YouTube videolarını gömme ve yönetme işlevselliği sağlar.
 
 
-// Tema Kontrolü
+// Temel değişkenler ve sabitler
+const videoGrid = document.getElementById('videoGrid');
+const addChannelForm = document.getElementById('addChannelForm');
+const MAX_VIDEOS = 12;
+let videos = [];
+
+// Temalar için elementleri alıyoruz
 function toggleTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
-    
     if (theme === 'auto') {
         const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
     }
 }
 
+// Tema başlatıcı
 function initTheme() {
     const savedTheme = localStorage.getItem('theme') || 'auto';
     document.getElementById('themeSelect').value = savedTheme;
     toggleTheme(savedTheme);
-    
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-        if (localStorage.getItem('theme') === 'auto') {
-            document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
-        }
-    });
 }
 
-const videoGrid = document.getElementById('videoGrid');
-const addChannelForm = document.getElementById('addChannelForm');
-const videos = [];
-const MAX_VIDEOS = 12; // Video ekleme limiti
 
-
-// Videoların çerez olarak yerelde saklanması için kullanılan fonksiyon
-function saveVideosToStorage(videos) {
-    try {
-        const videoIds = Array.from(videos).map(container => {
-            const iframe = container.querySelector('iframe');
-            const src = iframe.getAttribute('src');
-            return src.split('/').pop();
-        });
-        localStorage.setItem('savedVideos', JSON.stringify(videoIds));
-    } catch (error) {
-        console.error('Videolar kayıt edilirken sorun oluştu:', error);
-    }
-}
-// Videoların yerel depolamadan yüklenmesi için kullanılan fonksiyon
-function loadVideosFromStorage() {
-    try {
-        const savedVideos = localStorage.getItem('savedVideos');
-        if (savedVideos) {
-            const videoIds = JSON.parse(savedVideos);
-            videoIds.forEach(videoId => {
-                if (videos.length < MAX_VIDEOS) {
-                    addVideo(videoId, false);
-                }
-            });
-        }
-    } catch (error) {
-        console.error('Videolar yüklenirken hata oluştu:', error);
-        localStorage.removeItem('savedVideos'); // Bozuk veriler siliniyor
-    }
-}
-// YouTube video ID'sini URL'den çıkartmak için kullanılan fonksiyon. Bu fonksiyon, YouTube URL'sinden video ID'sini alır.
-function extractVideoId(url) {
-    // Çoklu YouTube URL formatının desteklenmesi için düzenli ifadeler kullanılır
-    // Bu ifadeler, YouTube'un standart URL formatlarını ve bazı özel durumları kapsar.
-    const patterns = [
-        /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/,
-        /^.*(?:youtube.com\/live\/)([^#&?]*).*/,  // Canlı yayın formatı
-        /^.*(?:youtube.com\/shorts\/)([^#&?]*).*/  // YouTube Shorts formatı
-    ];
-
-    for (const pattern of patterns) {
-        const match = url.match(pattern);
-        if (match && match[2]?.length === 11) {
-            return match[2];
-        } else if (match && match[1]?.length === 11) {
-            return match[1];
-        }
-    }
-    return null;
-}
-// Video ekleme fonksiyonu. Bu fonksiyon, video ID'sini alır ve videoyu ekler.
-function addVideo(videoId, shouldSave = true) {
-    if (videos.length >= MAX_VIDEOS) {
-        alert(`Üst limit olan ${MAX_VIDEOS} videoya ulaşıldı!`);
-        return;
-    }
-
-    try {
-        const videoContainer = document.createElement('div');
-        videoContainer.className = 'video-container';
-        
-        const embedType = videoId.toLowerCase().includes('live') ? 'live_stream' : 'embed';
-        
-        videoContainer.innerHTML = `
-            <button class="remove-btn" onclick="removeVideo(this.parentElement)">×</button>
-            <iframe
-                src="https://www.youtube.com/${embedType}/${videoId}?autoplay=1&mute=1"
-                frameborder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowfullscreen>
-            </iframe>
-        `;
-        videos.push(videoContainer);
-        videoGrid.appendChild(videoContainer);
-        
-        if (shouldSave) {
-            saveVideosToStorage(videos);
-        }
-    } catch (error) {
-        console.error('Video eklerken hata oluştu:', error);
-    }
-}
-// Video kaldırma fonksiyonu. Bu fonksiyon, video konteynerini alır ve videoyu kaldırır. Ayrıca, kaldırılan videoyu yerel depolamadan siler.
-function removeVideo(container) {
-    try {
-        const index = videos.indexOf(container);
-        if (index > -1) {
-            videos.splice(index, 1);
-            container.remove();
-            saveVideosToStorage(videos);
-        }
-    } catch (error) {
-        console.error('Video kaldırırken hata oluştu:', error);
-    }
-}
-// Video bağlantılarını kontrol etme fonksiyonu. Bu fonksiyon, video bağlantılarının geçerli olup olmadığını kontrol eder.
+// Video bağlantılarını işleme
 addChannelForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const videoUrl = document.getElementById('videoUrl').value.trim();
-    const videoId = extractVideoId(videoUrl);
-    
-    if (videoId) {
-        addVideo(videoId);
-        document.getElementById('videoUrl').value = '';
-    } else {
-        alert("Lütfen geçerli bir YouTube URL'si girin.");
+
+    if (videos.length >= MAX_VIDEOS) {
+        alert(`En fazla ${MAX_VIDEOS} ekleyebilirsiniz!`);
+        return;
     }
+
+    if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
+        handleYouTubeVideo(videoUrl);
+    } else if (videoUrl.includes('twitch.tv')) {
+        handleTwitchVideo(videoUrl);
+    } else {
+        alert('Lütfen geçerli bir YouTube veya Twitch bağlantısı ekleyin');
+    }
+
+    document.getElementById('videoUrl').value = '';
 });
 
-// Kayıt edilen videoları yerel depolamadan yükler ve sayfa yüklendiğinde temayı başlatır
+// Ortak video işleme fonksiyonları
+function removeVideo(container) {
+    const index = videos.indexOf(container);
+    if (index > -1) {
+        videos.splice(index, 1);
+        container.remove();
+        saveVideosToStorage();
+    }
+}
+
+// Yerel depolama seçenekleri
+function saveVideosToStorage() {
+    const videoData = videos.map(container => {
+        const iframe = container.querySelector('iframe');
+        return {
+            url: iframe.src,
+            type: iframe.src.includes('youtube') ? 'youtube' : 'twitch'
+        };
+    });
+    localStorage.setItem('savedVideos', JSON.stringify(videoData));
+}
+
+// Kayıtlı videoların başlangıçta tekrar açılması için fonksiyon
 window.addEventListener('load', () => {
     initTheme();
-    loadVideosFromStorage();
+    const savedVideos = JSON.parse(localStorage.getItem('savedVideos') || '[]');
+    savedVideos.forEach(video => {
+        if (video.type === 'youtube') {
+            const videoId = video.url.split('/').pop().split('?')[0];
+            handleYouTubeVideo(`https://youtube.com/watch?v=${videoId}`, false);
+        } else if (video.type === 'twitch') {
+            const channelName = video.url.split('channel=')[1].split('&')[0];
+            handleTwitchVideo(`https://twitch.tv/${channelName}`, false);
+        }
+    });
 });

@@ -20,14 +20,19 @@
 <body>
     <nav class="navbar">         
         <form id="addChannelForm">
-            <input type="text" id="videoUrl" placeholder="YouTube bağlantısını ekleyin" required>
-            <button type="submit">Kanal Ekle</button>
+            <input type="text" id="videoUrl" placeholder="Video bağlantısı ekleyin" required>
+            <button type="submit">Ekle</button>
         </form>
     </nav>
     <div class="container">
         <div id="videoGrid"></div>
     </div>
+    <!-- Add a note about the parent parameter for Twitch embeds -->
+    <script>
+    </script>
     <script src="script.js"></script>
+    <script src="youtube.js"></script>
+    <script src="twitch.js"></script>
     <footer class="footer">
         <p>© 2025 Bana Bir Sebep Ver</p>
         <div class="theme-selector">
@@ -37,7 +42,7 @@
                 <option value="auto">🔄 Otomatik</option>
             </select>
         </div> 
-        <span class="version">v1.2.1</span>
+        <span class="version">v1.3</span>
     </footer>
 </body>
 </html>
