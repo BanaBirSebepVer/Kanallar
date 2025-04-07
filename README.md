@@ -8,6 +8,7 @@ Bu proje, internet yayınlarını tek bir ekranda izlemek için yapılmıştır.
 ## Platformlar
 - [x] YouTube
 - [x] Twitch
+- [x] Kick
 - [ ] TikTok
 
 ## Nasıl Kullanılır?
