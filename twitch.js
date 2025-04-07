@@ -5,11 +5,11 @@ function handleTwitchVideo(url, saveToStorage = true) {
         alert('Geçersiz Twitch bağlantısı');
         return;
     }
-    
+
     const container = createTwitchEmbed(channelName);
     videos.push(container);
     videoGrid.appendChild(container);
-    
+
     if (saveToStorage) {
         saveVideosToStorage();
     }

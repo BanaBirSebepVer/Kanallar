@@ -5,11 +5,11 @@ function handleYouTubeVideo(url, saveToStorage = true) {
         alert('Geçersiz YouTube bağlantısı');
         return;
     }
-    
+
     const container = createYouTubeEmbed(videoId);
     videos.push(container);
     videoGrid.appendChild(container);
-    
+
     if (saveToStorage) {
         saveVideosToStorage();
     }

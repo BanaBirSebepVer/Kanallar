@@ -15,6 +15,8 @@ Bu proje, internet yayınlarını tek bir ekranda izlemek için yapılmıştır.
 2. Twitch için kanal bağlantısını ekleyin.
 3. Eklediğiniz kanalları silebilirsiniz.
 
+### v1.3.1
+- [x] Kick kanalları eklenebilir. Bu sayede Kick yayınları izlenebilir.
 
 ### v1.3
 YouTube ile birlikte Twitch kanallarını da eklenebilir. Bu sayede hem YouTube hem de Twitch yayınları izlenebilir.

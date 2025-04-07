@@ -1,5 +1,3 @@
-
-
 // Temel değişkenler ve sabitler
 const videoGrid = document.getElementById('videoGrid');
 const addChannelForm = document.getElementById('addChannelForm');
@@ -23,7 +21,6 @@ function initTheme() {
     toggleTheme(savedTheme);
 }
 
-
 // Video bağlantılarını işleme
 addChannelForm.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -38,8 +35,10 @@ addChannelForm.addEventListener('submit', (e) => {
         handleYouTubeVideo(videoUrl);
     } else if (videoUrl.includes('twitch.tv')) {
         handleTwitchVideo(videoUrl);
+    } else if (videoUrl.includes('kick.com')) {
+        handleKickVideo(videoUrl);
     } else {
-        alert('Lütfen geçerli bir YouTube veya Twitch bağlantısı ekleyin');
+        alert('Lütfen geçerli bir YouTube, Twitch veya Kick bağlantısı ekleyin');
     }
 
     document.getElementById('videoUrl').value = '';
@@ -57,27 +56,52 @@ function removeVideo(container) {
 
 // Yerel depolama seçenekleri
 function saveVideosToStorage() {
-    const videoData = videos.map(container => {
-        const iframe = container.querySelector('iframe');
-        return {
-            url: iframe.src,
-            type: iframe.src.includes('youtube') ? 'youtube' : 'twitch'
-        };
-    });
-    localStorage.setItem('savedVideos', JSON.stringify(videoData));
+    const videoUrls = Array.from(document.querySelectorAll('.video-container iframe')).map(iframe => {
+        const src = iframe.getAttribute('src');
+        if (src.includes('player.kick.com')) {
+            const channelName = src.split('player.kick.com/')[1];
+            return channelName ? `https://kick.com/${channelName}` : null;
+        } else if (src.includes('youtube.com')) {
+            const videoId = src.match(/embed\/([^?]+)/)?.[1];
+            return videoId ? `https://youtube.com/watch?v=${videoId}` : null;
+        } else if (src.includes('twitch.tv')) {
+            const channelName = src.match(/channel=([^&]+)/)?.[1];
+            return channelName ? `https://twitch.tv/${channelName}` : null;
+        }
+        return null;
+    }).filter(url => url !== null);
+    
+    localStorage.setItem('videos', JSON.stringify(videoUrls));
 }
 
-// Kayıtlı videoların başlangıçta tekrar açılması için fonksiyon
-window.addEventListener('load', () => {
-    initTheme();
-    const savedVideos = JSON.parse(localStorage.getItem('savedVideos') || '[]');
-    savedVideos.forEach(video => {
-        if (video.type === 'youtube') {
-            const videoId = video.url.split('/').pop().split('?')[0];
-            handleYouTubeVideo(`https://youtube.com/watch?v=${videoId}`, false);
-        } else if (video.type === 'twitch') {
-            const channelName = video.url.split('channel=')[1].split('&')[0];
-            handleTwitchVideo(`https://twitch.tv/${channelName}`, false);
+function loadVideosFromStorage() {
+    try {
+        const savedVideos = localStorage.getItem('videos');
+        if (savedVideos) {
+            videos = []; // Reset current videos array
+            videoGrid.innerHTML = ''; // Clear existing grid
+            const urls = JSON.parse(savedVideos);
+            
+            urls.forEach(url => {
+                if (!url) return;
+                
+                if (url.includes('kick.com')) {
+                    handleKickVideo(url, false);
+                } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
+                    handleYouTubeVideo(url, false);
+                } else if (url.includes('twitch.tv')) {
+                    handleTwitchVideo(url, false);
+                }
+            });
         }
-    });
+    } catch (error) {
+        console.error('Error loading videos:', error);
+        localStorage.removeItem('videos'); // Clear corrupted storage
+    }
+}
+
+// Ensure DOM is loaded before initializing
+window.addEventListener('DOMContentLoaded', () => {
+    initTheme();
+    loadVideosFromStorage();
 });
