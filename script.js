@@ -95,7 +95,7 @@ function loadVideosFromStorage() {
             });
         }
     } catch (error) {
-        console.error('Error loading videos:', error);
+        console.error('Videolar yüklenirken hata oluştu:', error);
         localStorage.removeItem('videos'); // Clear corrupted storage
     }
 }
