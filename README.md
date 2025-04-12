@@ -17,6 +17,9 @@ Bu proje, internet yayınlarını tek bir ekranda izlemek için yapılmıştır.
 3. Kick için kanal bağlantısını ekleyin.
 4. Eklediğiniz kanalları silebilirsiniz.
 
+### v1.3.2
+- [x] Fon resmi ekleme ve değiştirme özelliği eklendi.
+
 ### v1.3.1
 - [x] Kick kanalları eklenebilir. Bu sayede Kick yayınları izlenebilir.
 
