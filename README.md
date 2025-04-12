@@ -5,8 +5,7 @@ Bu proje, internet yayınlarını tek bir ekranda izlemek için yapılmıştır.
 - Medya takipçileri
 - Yayıncılar
 
-> [!IMPORTANT]
-
+> [!CAUTION]
 > Yapacağınız katkılar için lütfen "update" paketini kullanın. Bu sayede, projenin güncel kalmasını sağlayabilirsiniz.
 
 ## Platformlar
