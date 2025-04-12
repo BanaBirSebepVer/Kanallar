@@ -6,6 +6,8 @@
     --button-bg: #007bff;
     --button-text: white;
     --footer-bg: #f8f9fa;
+    --bg-opacity: 0;
+    --icon-text: #000000;
 }
 
 :root[data-theme="dark"] {
@@ -16,11 +18,18 @@
     --button-bg: #0056b3;
     --button-text: white;
     --footer-bg: #2d2d2d;
+    --bg-opacity: 0;
+    --icon-text: #ffffff;
 }
 
 body {
     background-color: var(--bg-color);
     color: var(--text-color);
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    transition: background-image 0.3s ease;
 }
 
 .navbar {
@@ -87,6 +96,20 @@ button {
 .container {
     margin-top: 80px;
     padding: 0px;
+    position: relative;
+    z-index: 1;
+}
+
+.container::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--bg-color);
+    opacity: var(--bg-opacity);
+    z-index: -1;
 }
 
 #videoGrid {
@@ -99,7 +122,7 @@ button {
 .video-container {
     position: relative;
     width: 100%;
-    padding-top: 56.25%; /* 16:9 aspect ratio */
+    padding-top: 56.25%; /* 16:9 ölçeklendirmesi */
     background: var(--bg-secondary);
     border-radius: 8px;
     overflow: hidden;
@@ -165,12 +188,33 @@ button {
     padding: 10px;
 }
 
+.bg-controls {
+    position: absolute;
+    right: 200px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 10px;
+}
 
+.bg-controls button {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    color: var(--icon-text);
+}
 
-/* Media query for mobile devices */
+.bg-controls .material-icons {
+    font-size: 20px;
+}
+
+/* Mobil cihazlar için sorgu */
 @media screen and (max-width: 768px) {
     #videoGrid {
-        grid-template-columns: 1fr;  /* Single column for mobile */
+        grid-template-columns: 1fr;  /* Mobil cihazlar için tek sütun */
         gap: 0px;
         padding: 0px;
     }
@@ -188,4 +232,10 @@ button {
     #addChannelForm button {
         width: 100%;
     }
+    .bg-controls {
+        display: none;
+    }
 }
+
+
+

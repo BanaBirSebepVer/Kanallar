@@ -1,8 +1,8 @@
 // Temel değişkenler ve sabitler
-const videoGrid = document.getElementById('videoGrid');
-const addChannelForm = document.getElementById('addChannelForm');
-const MAX_VIDEOS = 12;
-let videos = [];
+const videoGrid = document.getElementById('videoGrid'); // Izgara alanı
+const addChannelForm = document.getElementById('addChannelForm'); // Form elementini alıyoruz
+const MAX_VIDEOS = 12; // Maksimum video sayısı
+let videos = []; // Video dizisi
 
 // Temalar için elementleri alıyoruz
 function toggleTheme(theme) {
@@ -78,8 +78,8 @@ function loadVideosFromStorage() {
     try {
         const savedVideos = localStorage.getItem('videos');
         if (savedVideos) {
-            videos = []; // Reset current videos array
-            videoGrid.innerHTML = ''; // Clear existing grid
+            videos = []; // Geçerli diziyi sıfırla
+            videoGrid.innerHTML = ''; // Önceki videoları temizle
             const urls = JSON.parse(savedVideos);
             
             urls.forEach(url => {
@@ -96,12 +96,54 @@ function loadVideosFromStorage() {
         }
     } catch (error) {
         console.error('Videolar yüklenirken hata oluştu:', error);
-        localStorage.removeItem('videos'); // Clear corrupted storage
+        localStorage.removeItem('videos'); // Bozuk depolama verisini temizler
     }
 }
 
-// Ensure DOM is loaded before initializing
+//
+// Arka plan resmi yükleme işlemi
+//
+const DEFAULT_BACKGROUND = 'imaj/background.png'; // Temel arka plan resmi
+const bgUploadBtn = document.getElementById('bgUploadBtn'); // Arka plan yükleme tuşu
+const resetBgBtn = document.getElementById('resetBgBtn'); // Arka plan sıfırlama tuşu
+const bgImageUpload = document.getElementById('bgImageUpload'); // Arka plan resmi yükleme işlemine ait giriş
+// Arka plan yükleme tuşuna basıldığında ne işlem yapılacağını tanımlar
+bgUploadBtn.addEventListener('click', () => {
+    bgImageUpload.click(); // Yapılacak işlemi tetikler
+});
+// Arka plan resmi yükleme işlemi için pencere açma işlemi gerçekleşir
+bgImageUpload.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader(); // Okuma işlemini dosya nesnesi ile yapar
+        reader.onload = (e) => {
+            const imageData = e.target.result;
+            document.body.style.backgroundImage = `url(${imageData})`;
+            localStorage.setItem('backgroundImage', imageData);
+        };
+        reader.readAsDataURL(file);
+    }
+});
+// Arka planı sıfırlama tuşuna basıldığında ne işlem yapılacağını tanımlar
+resetBgBtn.addEventListener('click', () => {
+    document.body.style.backgroundImage = `url(${DEFAULT_BACKGROUND})`;
+    localStorage.removeItem('backgroundImage');
+});
+// Kayıttan arka plan resmini getirme işlemi
+function loadSavedBackground() {
+    const savedBg = localStorage.getItem('backgroundImage');
+    if (savedBg) { // Kullanıcı arka plan resmi yüklemişse onu kullanır
+        document.body.style.backgroundImage = `url(${savedBg})`;
+    } else { // Yoksa varsayılan resmi kullanır
+        document.body.style.backgroundImage = `url(${DEFAULT_BACKGROUND})`;
+    }
+}
+
+//
+// DOM'un yüklendiği zaman çalışacak fonksiyonlar
+//
 window.addEventListener('DOMContentLoaded', () => {
     initTheme();
     loadVideosFromStorage();
+    loadSavedBackground();
 });
