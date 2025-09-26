@@ -1,6 +1,9 @@
 # KANALLAR
 Bu proje, internet yayınlarını tek bir ekranda izlemek için yapılmıştır. Kullanıcılar, istedikleri videoları ve canlı yayınları tek bir ekranda izleyebilirler. Proje, kullanıcıların medya takibi yapmalarına ve yayıncıların farklı yayınları tek bir ekranda izlemelerine olanak tanır.
 
+**Discord Sunucusu:** [https://discord.gg/WZ8xkMmw2A](https://discord.gg/WZ8xkMmw2A)
+
+
 ## Kimler İçin?
 - Medya takipçileri
 - Yayıncılar
