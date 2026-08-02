@@ -45,7 +45,7 @@ body {
 
 .theme-selector {
     position: absolute;
-    right: 50px;
+    right: 150px;
     top: 50%;
     transform: translateY(-50%);
 }
