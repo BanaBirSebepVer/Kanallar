@@ -21,6 +21,22 @@ function initTheme() {
     toggleTheme(savedTheme);
 }
 
+
+// --- GÜVENLİK: URL DOĞRULAMA (CodeQL Sanitize) ---
+function getSafeHostname(urlString) {
+    try {
+        // Kullanıcı "https://" yazmadıysa otomatik ekle
+        if (!urlString.startsWith('http://') && !urlString.startsWith('https://')) {
+            urlString = 'https://' + urlString;
+        }
+        const url = new URL(urlString);
+        return url.hostname.replace('www.', ''); // www kısmını atarak temiz domaini döndürür
+    } catch (e) {
+        return ''; // Geçersiz bir URL yapısıysa boş döner
+    }
+}
+
+
 // Video bağlantılarını işleme
 addChannelForm.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -31,11 +47,12 @@ addChannelForm.addEventListener('submit', (e) => {
         return;
     }
 
-    if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
+    const hostname = getSafeHostname(videoUrl);
+    if (hostname === 'youtube.com' || hostname === 'youtu.be') {
         handleYouTubeVideo(videoUrl);
-    } else if (videoUrl.includes('twitch.tv')) {
+    } else if (hostname === 'twitch.tv') {
         handleTwitchVideo(videoUrl);
-    } else if (videoUrl.includes('kick.com')) {
+    } else if (hostname === 'kick.com' || hostname === 'player.kick.com') {
         handleKickVideo(videoUrl);
     } else {
         alert('Lütfen geçerli bir YouTube, Twitch veya Kick bağlantısı ekleyin');
@@ -58,13 +75,14 @@ function removeVideo(container) {
 function saveVideosToStorage() {
     const videoUrls = Array.from(document.querySelectorAll('.video-container iframe')).map(iframe => {
         const src = iframe.getAttribute('src');
-        if (src.includes('player.kick.com')) {
+        const host = getSafeHostname(src);
+        if (host === 'kick.com' || host === 'player.kick.com') {
             const channelName = src.split('player.kick.com/')[1];
             return channelName ? `https://kick.com/${channelName}` : null;
-        } else if (src.includes('youtube.com')) {
+        } else if (host === 'youtube.com' || host === 'youtu.be') {
             const videoId = src.match(/embed\/([^?]+)/)?.[1];
             return videoId ? `https://youtube.com/watch?v=${videoId}` : null;
-        } else if (src.includes('twitch.tv')) {
+        } else if (host === 'twitch.tv' || host === 'player.twitch.tv') {
             const channelName = src.match(/channel=([^&]+)/)?.[1];
             return channelName ? `https://twitch.tv/${channelName}` : null;
         }
@@ -83,16 +101,11 @@ function loadVideosFromStorage() {
             const urls = JSON.parse(savedVideos);
             
             urls.forEach(url => {
-                if (!url) return;
-                
-                if (url.includes('kick.com')) {
-                    handleKickVideo(url, false);
-                } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
-                    handleYouTubeVideo(url, false);
-                } else if (url.includes('twitch.tv')) {
-                    handleTwitchVideo(url, false);
-                }
-            });
+                const host = getSafeHostname(url);
+                        if (host === 'kick.com' || host === 'player.kick.com') handleKickVideo(url, false);
+                        else if (host === 'youtube.com' || host === 'youtu.be') handleYouTubeVideo(url, false);
+                        else if (host === 'twitch.tv') handleTwitchVideo(url, false);
+                    });
         }
     } catch (error) {
         console.error('Videolar yüklenirken hata oluştu:', error);
@@ -240,9 +253,10 @@ function checkSharedListInUrl() {
                     
                     // Gelen JSON dizisindeki videoları ekrana bas
                     data.data.forEach(url => {
-                        if (url.includes('kick.com')) handleKickVideo(url, false);
-                        else if (url.includes('youtube.com') || url.includes('youtu.be')) handleYouTubeVideo(url, false);
-                        else if (url.includes('twitch.tv')) handleTwitchVideo(url, false);
+                        const host = getSafeHostname(url);
+                        if (host === 'kick.com' || host === 'player.kick.com') handleKickVideo(url, false);
+                        else if (host === 'youtube.com' || host === 'youtu.be') handleYouTubeVideo(url, false);
+                        else if (host === 'twitch.tv' || host === 'player.twitch.tv') handleTwitchVideo(url, false);
                     });
 
                     // Görüntülenme sayısını artırmak (Anti-spam kurallarıyla) için sunucuya bildir
@@ -295,9 +309,10 @@ function shareCurrentList() {
     // İframe'lerden URL'leri topla
     const currentVideos = Array.from(iframes).map(iframe => {
         const src = iframe.getAttribute('src');
-        if (src.includes('player.kick.com')) return `https://kick.com/${src.split('player.kick.com/')[1]}`;
-        if (src.includes('youtube.com')) return `https://youtube.com/watch?v=${src.match(/embed\/([^?]+)/)?.[1]}`;
-        if (src.includes('twitch.tv')) return `https://twitch.tv/${src.match(/channel=([^&]+)/)?.[1]}`;
+        const host = getSafeHostname(src);
+        if (host === 'kick.com' || host === 'player.kick.com') return `https://kick.com/${src.split('player.kick.com/')[1]}`;
+        if (host === 'youtube.com' || host === 'youtu.be') return `https://youtube.com/watch?v=${src.match(/embed\/([^?]+)/)?.[1]}`;
+        if (host === 'twitch.tv' || host === 'player.twitch.tv') return `https://twitch.tv/${src.match(/channel=([^&]+)/)?.[1]}`;
         return null;
     }).filter(url => url !== null);
 
