@@ -75,13 +75,14 @@ function removeVideo(container) {
 function saveVideosToStorage() {
     const videoUrls = Array.from(document.querySelectorAll('.video-container iframe')).map(iframe => {
         const src = iframe.getAttribute('src');
-        if (src.includes('player.kick.com')) {
+        const host = getSafeHostname(src);
+        if (host === 'kick.com' || host === 'player.kick.com') {
             const channelName = src.split('player.kick.com/')[1];
             return channelName ? `https://kick.com/${channelName}` : null;
-        } else if (src.includes('youtube.com')) {
+        } else if (host === 'youtube.com' || host === 'youtu.be') {
             const videoId = src.match(/embed\/([^?]+)/)?.[1];
             return videoId ? `https://youtube.com/watch?v=${videoId}` : null;
-        } else if (src.includes('twitch.tv')) {
+        } else if (host === 'twitch.tv' || host === 'player.twitch.tv') {
             const channelName = src.match(/channel=([^&]+)/)?.[1];
             return channelName ? `https://twitch.tv/${channelName}` : null;
         }
@@ -89,6 +90,11 @@ function saveVideosToStorage() {
     }).filter(url => url !== null);
     
     localStorage.setItem('videos', JSON.stringify(videoUrls));
+
+    // YENİ: Video eklendiğinde/silindiğinde giriş yapılmışsa buluta gönder
+    if (isAuthenticated) {
+        syncHistoryToCloud();
+    }
 }
 
 function loadVideosFromStorage() {
@@ -405,17 +411,15 @@ function checkAuthStatus() {
         .then(data => {
             const signinBtn = document.querySelector('.g_id_signin');
             const logoutBtn = document.getElementById('logoutBtn');
-            const historyBtn = document.getElementById('historyBtn');
+            const historyBtn = document.getElementById('historyBtn'); // Geçmiş butonu eklendiyse
             
-            isAuthenticated = data.logged_in; // Durumu değişkene kaydet
+            isAuthenticated = data.logged_in; // DURUMU KAYDET
             
             if (data.logged_in) {
                 if (signinBtn) signinBtn.style.display = 'none';
                 if (logoutBtn) logoutBtn.style.display = 'flex';
                 if (historyBtn) historyBtn.style.display = 'flex'; 
-                
-                // Sayfa yüklendiğinde kullanıcı zaten giriş yapmışsa geçmişi bulutla eşitle
-                syncHistoryToCloud(); 
+                syncHistoryToCloud(); // Sayfa yüklendiğinde bir kez eşitle
             } else {
                 if (signinBtn) signinBtn.style.display = 'block';
                 if (logoutBtn) logoutBtn.style.display = 'none';
