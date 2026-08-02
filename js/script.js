@@ -1,11 +1,10 @@
 // Temel değişkenler ve sabitler
-const videoGrid = document.getElementById('videoGrid'); // Izgara alanı
-const addChannelForm = document.getElementById('addChannelForm'); // Form elementini alıyoruz
-const MAX_VIDEOS = 12; // Maksimum video sayısı
-let videos = []; // Video dizisi
-let isAuthenticated = false; // YENİ: Oturum durumunu takip edeceğimiz değişken
+const videoGrid = document.getElementById('videoGrid');
+const addChannelForm = document.getElementById('addChannelForm');
+const MAX_VIDEOS = 12;
+let videos = [];
+let isAuthenticated = false;
 
-// Temalar için elementleri alıyoruz
 function toggleTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
@@ -15,15 +14,12 @@ function toggleTheme(theme) {
     }
 }
 
-// Tema başlatıcı
 function initTheme() {
     const savedTheme = localStorage.getItem('theme') || 'auto';
     document.getElementById('themeSelect').value = savedTheme;
     toggleTheme(savedTheme);
 }
 
-
-// --- GÜVENLİK: URL DOĞRULAMA (CodeQL Sanitize) ---
 function getSafeHostname(urlString) {
     try {
         if (!urlString.startsWith('http://') && !urlString.startsWith('https://')) {
@@ -36,8 +32,6 @@ function getSafeHostname(urlString) {
     }
 }
 
-
-// Video bağlantılarını işleme
 addChannelForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const videoUrl = document.getElementById('videoUrl').value.trim();
@@ -48,20 +42,40 @@ addChannelForm.addEventListener('submit', (e) => {
     }
 
     const hostname = getSafeHostname(videoUrl);
+    let isAdded = false;
+
     if (hostname === 'youtube.com' || hostname === 'youtu.be') {
         handleYouTubeVideo(videoUrl);
+        isAdded = true;
     } else if (hostname === 'twitch.tv') {
         handleTwitchVideo(videoUrl);
+        isAdded = true;
     } else if (hostname === 'kick.com' || hostname === 'player.kick.com') {
         handleKickVideo(videoUrl);
+        isAdded = true;
     } else {
         alert('Lütfen geçerli bir YouTube, Twitch veya Kick bağlantısı ekleyin');
+    }
+
+    // Video başarılı bir şekilde eklendiyse ve kullanıcı giriş yaptıysa geçmişe kaydet
+    if (isAdded) {
+        addVideoToCloudHistory(videoUrl);
     }
 
     document.getElementById('videoUrl').value = '';
 });
 
-// Ortak video işleme fonksiyonları
+// Yalnızca eklenen videoyu db'ye yazar
+function addVideoToCloudHistory(videoUrl) {
+    if (!isAuthenticated) return;
+    
+    fetch('api/api_sync_history.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ history: [videoUrl] })
+    }).catch(err => console.error('Geçmişe eklenirken hata oluştu:', err));
+}
+
 function removeVideo(container) {
     const index = videos.indexOf(container);
     if (index > -1) {
@@ -71,7 +85,6 @@ function removeVideo(container) {
     }
 }
 
-// Yerel depolama seçenekleri
 function saveVideosToStorage() {
     const videoUrls = Array.from(document.querySelectorAll('.video-container iframe')).map(iframe => {
         const src = iframe.getAttribute('src');
@@ -90,11 +103,6 @@ function saveVideosToStorage() {
     }).filter(url => url !== null);
     
     localStorage.setItem('videos', JSON.stringify(videoUrls));
-
-    // YENİ: Video eklendiğinde/silindiğinde giriş yapılmışsa buluta gönder
-    if (isAuthenticated) {
-        syncHistoryToCloud();
-    }
 }
 
 function loadVideosFromStorage() {
@@ -106,7 +114,6 @@ function loadVideosFromStorage() {
             const items = JSON.parse(savedVideos);
             
             items.forEach(item => {
-                // Geriye dönük uyumluluk (Eğer eski format string dizisi idiyse)
                 const url = typeof item === 'string' ? item : item.url;
                 if (!url) return;
                 
@@ -122,7 +129,6 @@ function loadVideosFromStorage() {
     }
 }
 
-// Arka plan resmi yükleme işlemi
 const DEFAULT_BACKGROUND = 'imaj/background.png'; 
 const bgUploadBtn = document.getElementById('bgUploadBtn'); 
 const resetBgBtn = document.getElementById('resetBgBtn'); 
@@ -159,7 +165,6 @@ function loadSavedBackground() {
     }
 }
 
-// DOM Yüklenme
 window.addEventListener('DOMContentLoaded', () => {
     initTheme();
     checkAuthStatus();
@@ -175,7 +180,6 @@ window.addEventListener('DOMContentLoaded', () => {
     loadSavedBackground();
 });
 
-// Google Giriş işlemi tamamlandığında tetiklenen fonksiyon
 function handleCredentialResponse(response) {
     const id_token = response.credential;
 
@@ -195,7 +199,6 @@ function handleCredentialResponse(response) {
     .then(data => {
         if (data.status === 'success') {
             console.log('Sisteme giriş başarılı.');
-            syncHistoryToCloud();
             document.querySelector('.g_id_signin').style.display = 'none';
             checkAuthStatus(); 
         } else {
@@ -208,27 +211,6 @@ function handleCredentialResponse(response) {
     });
 }
 
-// Yerel geçmişi (localStorage) buluta eşitleme fonksiyonu
-function syncHistoryToCloud() {
-    const savedVideos = localStorage.getItem('videos');
-    if (!savedVideos) return; 
-
-    fetch('api/api_sync_history.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ history: JSON.parse(savedVideos) })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.status === 'success') {
-            console.log('Yerel geçmişiniz başlıklarla birlikte buluta aktarıldı.');
-        } else {
-            console.error('Senkronizasyon hatası:', data.message);
-        }
-    });
-}
-
-// URL'de "list" parametresi kontrolü
 function checkSharedListInUrl() {
     const urlParams = new URLSearchParams(window.location.search);
     const listId = urlParams.get('list');
@@ -278,7 +260,6 @@ function logoutUser() {
         });
 }
 
-// --- LİSTE PAYLAŞMA FONKSİYONU ---
 function shareCurrentList() {
     const iframes = document.querySelectorAll('.video-container iframe');
     if (iframes.length === 0) {
@@ -316,7 +297,6 @@ function shareCurrentList() {
     .catch(err => console.error('Paylaşım işleminde hata:', err));
 }
 
-// --- LİDER TABLOSU FONKSİYONLARI ---
 function showLeaderboard() {
     const modal = document.getElementById('leaderboardModal');
     const listElement = document.getElementById('leaderboardList');
@@ -353,7 +333,6 @@ function closeLeaderboard() {
     document.getElementById('leaderboardModal').style.display = 'none';
 }
 
-// --- GEÇMİŞ MODALI FONKSİYONLARI ---
 function showHistoryModal() {
     const modal = document.getElementById('historyModal');
     const listElement = document.getElementById('historyList');
@@ -404,22 +383,20 @@ window.onclick = function(event) {
     }
 };
 
-// Oturum durumu kontrolü
 function checkAuthStatus() {
     fetch('api/api_check_auth.php')
         .then(res => res.json())
         .then(data => {
             const signinBtn = document.querySelector('.g_id_signin');
             const logoutBtn = document.getElementById('logoutBtn');
-            const historyBtn = document.getElementById('historyBtn'); // Geçmiş butonu eklendiyse
+            const historyBtn = document.getElementById('historyBtn');
             
-            isAuthenticated = data.logged_in; // DURUMU KAYDET
+            isAuthenticated = data.logged_in; 
             
             if (data.logged_in) {
                 if (signinBtn) signinBtn.style.display = 'none';
                 if (logoutBtn) logoutBtn.style.display = 'flex';
                 if (historyBtn) historyBtn.style.display = 'flex'; 
-                syncHistoryToCloud(); // Sayfa yüklendiğinde bir kez eşitle
             } else {
                 if (signinBtn) signinBtn.style.display = 'block';
                 if (logoutBtn) logoutBtn.style.display = 'none';
@@ -429,7 +406,6 @@ function checkAuthStatus() {
         .catch(err => console.error('Oturum kontrol hatası:', err));
 }
 
-// Dinamik Sürüm Çekme
 function fetchVersionFromGitHub() {
     const repoOwner = 'BanaBirSebepVer'; 
     const repoName = 'Kanallar';
