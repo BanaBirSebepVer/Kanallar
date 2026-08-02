@@ -339,10 +339,8 @@ function showHistorySidebar() {
     const overlay = document.getElementById('sidebarOverlay');
     const listElement = document.getElementById('historyList');
     
-    // Yükleniyor durumu
-    listElement.innerHTML = '<li style="justify-content: center; padding: 20px;">Geçmiş yükleniyor...</li>';
+    listElement.innerHTML = '<li style="justify-content: center; background: transparent; border: none; color: gray;">Geçmiş yükleniyor...</li>';
     
-    // Sidebar'ı ve Örtüyü göster
     sidebar.classList.add('open');
     overlay.style.display = 'block';
 
@@ -353,23 +351,36 @@ function showHistorySidebar() {
             
             if (data.status === 'success' && data.data.length > 0) {
                 data.data.forEach(item => {
+                    const dateParts = item.Added_At.split(' ');
+                    const day = dateParts[0];
+                    const time = dateParts[1] ? dateParts[1].substring(0, 5) : '';
+
                     const li = document.createElement('li');
                     li.innerHTML = `
-                        <div style="flex: 1; margin-right: 15px;">
-                            <strong style="font-size: 1.1rem; display: block; margin-bottom: 5px;">${item.Video_Title}</strong>
-                            <small style="color: gray;">Kanal: ${item.Channel_Name} | Platform: ${item.Platform}</small><br>
-                            <a href="${item.Video_URL}" target="_blank" style="font-size: 13px; color: #007bff; text-decoration: none; word-break: break-all;">${item.Video_URL}</a>
+                        <div style="flex: 1; min-width: 0;">
+                            <span style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #007bff; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">
+                                ${item.Platform}
+                            </span>
+                            <strong style="font-size: 1rem; display: block; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-color);">
+                                ${item.Video_Title}
+                            </strong>
+                            <a href="${item.Video_URL}" target="_blank" style="font-size: 0.8rem; color: #007bff; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                ${item.Video_URL}
+                            </a>
                         </div>
-                        <span style="font-size: 12px; color: #888; min-width: 110px; text-align: right;">${item.Added_At}</span>
+                        <div style="text-align: right; color: var(--icon-text); display: flex; flex-direction: column; align-items: flex-end; justify-content: center; min-width: 75px; border-left: 1px solid var(--input-border); padding-left: 12px;">
+                            <span style="font-size: 0.85rem; font-weight: 600;">${time}</span>
+                            <span style="font-size: 0.7rem; opacity: 0.7;">${day}</span>
+                        </div>
                     `;
                     listElement.appendChild(li);
                 });
             } else {
-                listElement.innerHTML = '<li style="justify-content: center; color: gray;">Henüz kayıtlı geçmişiniz yok.</li>';
+                listElement.innerHTML = '<li style="justify-content: center; background: transparent; border: none; color: gray;">Henüz kayıtlı geçmişiniz yok.</li>';
             }
         })
         .catch(err => {
-            listElement.innerHTML = '<li style="color: #ff4d4d;">Geçmiş yüklenirken bir hata oluştu.</li>';
+            listElement.innerHTML = '<li style="color: #ff4d4d; background: transparent; border: none; text-align: center;">Geçmiş yüklenirken bir hata oluştu.</li>';
             console.error('Geçmiş hatası:', err);
         });
 }
