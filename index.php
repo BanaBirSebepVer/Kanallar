@@ -61,18 +61,20 @@
 
         <div class="bg-controls">
             <input type="file" id="bgImageUpload" accept="image/*" style="display: none;">
+            <!-- Arka Plan Yükleme Butonu -->
             <button id="bgUploadBtn"><span class="material-icons icon">image</span></button>
+            <!-- Arka Plan Sıfırlama Butonu -->
             <button id="resetBgBtn"><span class="material-icons icon">refresh</span></button>
+            <!-- Lider Tablosu Butonu -->
             <button id="leaderboardBtn" class="leaderboard-btn" onclick="showLeaderboard()"><span class="material-icons">leaderboard</span></button>
-        </div>
-
-        <div class="theme-selector">
+            <!-- Tema Seçici -->
             <select id="themeSelect" onchange="toggleTheme(this.value)">
                 <option value="light">🌞 Açık</option>
                 <option value="dark">🌙 Koyu</option>
                 <option value="auto">🔄 Otomatik</option>
             </select>
-        </div> 
+        </div>
+        <!-- Sürüm Bilgisi -->
         <span class="version" id="appVersion">Sürüm aranıyor...</span>
     </footer>
     <script src="js/script.js"></script>

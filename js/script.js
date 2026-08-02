@@ -398,11 +398,14 @@ function checkAuthStatus() {
 
 // --- DİNAMİK VERSİYON ÇEKME FONKSİYONU ---
 function fetchVersionFromGitHub() {
+    // 1. DÜZELTME: Kullanıcı adınızdaki harf eksikliğini (varsa) giderin
     const repoOwner = 'BanaBirSebepVer'; 
     const repoName = 'Kanallar';
+    
+    // 2. DÜZELTME: Dal adınız 'main' değilse burayı 'master' olarak değiştirin
+    const branch = 'main'; 
 
-    // main dalındaki (branch) son gönderiyi (commit) çeker
-    fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/commits/main`)
+    fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/commits/${branch}`)
         .then(res => {
             if (!res.ok) throw new Error('Commit bilgisi bulunamadı');
             return res.json();
@@ -411,9 +414,8 @@ function fetchVersionFromGitHub() {
             if (data.sha) {
                 const versionElement = document.getElementById('appVersion');
                 if (versionElement) {
-                    // Commit kodunun ilk 7 hanesini (Örn: Build a1b2c3d) ekrana basar
                     const shortSha = data.sha.substring(0, 7);
-                    versionElement.textContent = `Build ${shortSha}`; 
+                    versionElement.textContent = `Versiyon ${shortSha}`; 
                 }
             }
         })
