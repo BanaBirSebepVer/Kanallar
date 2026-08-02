@@ -71,34 +71,24 @@ function removeVideo(container) {
     }
 }
 
-// Yerel depolama seçenekleri (Başlık ve Kanal adıyla birlikte nesne olarak kaydeder)
+// Yerel depolama seçenekleri
 function saveVideosToStorage() {
-    const videoDataList = Array.from(document.querySelectorAll('.video-container iframe')).map(iframe => {
+    const videoUrls = Array.from(document.querySelectorAll('.video-container iframe')).map(iframe => {
         const src = iframe.getAttribute('src');
-        const title = iframe.getAttribute('data-title') || 'Bilinmeyen Video';
-        const channel = iframe.getAttribute('data-channel') || 'Bilinmeyen Kanal';
-        const host = getSafeHostname(src);
-
-        let url = null;
-        if (host === 'kick.com' || host === 'player.kick.com') {
+        if (src.includes('player.kick.com')) {
             const channelName = src.split('player.kick.com/')[1];
-            url = channelName ? `https://kick.com/${channelName}` : null;
-        } else if (host === 'youtube.com' || host === 'youtu.be') {
+            return channelName ? `https://kick.com/${channelName}` : null;
+        } else if (src.includes('youtube.com')) {
             const videoId = src.match(/embed\/([^?]+)/)?.[1];
-            url = videoId ? `https://youtube.com/watch?v=${videoId}` : null;
-        } else if (host === 'twitch.tv' || host === 'player.twitch.tv') {
+            return videoId ? `https://youtube.com/watch?v=${videoId}` : null;
+        } else if (src.includes('twitch.tv')) {
             const channelName = src.match(/channel=([^&]+)/)?.[1];
-            url = channelName ? `https://twitch.tv/${channelName}` : null;
+            return channelName ? `https://twitch.tv/${channelName}` : null;
         }
-
-        return url ? { url, title, channel } : null;
-    }).filter(item => item !== null);
+        return null;
+    }).filter(url => url !== null);
     
-    localStorage.setItem('videos', JSON.stringify(videoDataList));
-    // Eğer kullanıcı giriş yapmışsa, yeni eklenen/silinen videoyu anında DB'ye (buluta) gönder
-    if (isAuthenticated) {
-        syncHistoryToCloud();
-    }
+    localStorage.setItem('videos', JSON.stringify(videoUrls));
 }
 
 function loadVideosFromStorage() {

@@ -22,24 +22,40 @@ if (!isset($data['history']) || !is_array($data['history'])) {
     exit;
 }
 
+// URL'den başlık ve kanal adı çeken yardımcı fonksiyon (Sunucu tarafı)
+function getVideoDetails($url, $platform) {
+    $title = 'Bilinmeyen Video';
+    $channel = 'Bilinmeyen Kanal';
+    
+    if ($platform === 'youtube') {
+        // Sunucu üzerinden noembed API'sine hızlıca istek atar
+        $api_url = "https://noembed.com/embed?url=" . urlencode($url);
+        
+        // Timeout süresini 2 saniye ile kısıtlıyoruz ki sunucu beklemesin
+        $ctx = stream_context_create(['http' => ['timeout' => 2]]);
+        $response = @file_get_contents($api_url, false, $ctx);
+        
+        if ($response) {
+            $json = json_decode($response, true);
+            if (isset($json['title'])) $title = $json['title'];
+            if (isset($json['author_name'])) $channel = $json['author_name'];
+        }
+    }
+    // İleride Twitch veya Kick için de buraya eklentiler yapılabilir
+    return ['title' => $title, 'channel' => $channel];
+}
+
 try {
     $pdo->beginTransaction();
 
-    // 1. Eski geçmişi temizle
     $delete_stmt = $pdo->prepare("DELETE FROM Watch_History WHERE User_ID = ?");
     $delete_stmt->execute([$user_id]);
 
-    // 2. Yeni geçmişi başlık ve kanal bilgileriyle birlikte ekle
     $insert_stmt = $pdo->prepare("INSERT INTO Watch_History (User_ID, Video_URL, Video_Title, Channel_Name, Platform) VALUES (?, ?, ?, ?, ?)");
     
-    foreach ($data['history'] as $item) {
-        $video_url = isset($item['url']) ? $item['url'] : '';
-        $video_title = isset($item['title']) ? $item['title'] : 'Bilinmeyen Video';
-        $channel_name = isset($item['channel']) ? $item['channel'] : 'Bilinmeyen Kanal';
-        
+    foreach ($data['history'] as $video_url) {
         if (empty($video_url)) continue;
 
-        // Platformu tespit et
         $platform = 'unknown';
         $lower_url = strtolower($video_url);
         
@@ -51,14 +67,17 @@ try {
             $platform = 'kick';
         }
 
-        $insert_stmt->execute([$user_id, $video_url, $video_title, $channel_name, $platform]);
+        // Başlık ve Kanal adını sunucuda çek!
+        $details = getVideoDetails($video_url, $platform);
+
+        $insert_stmt->execute([$user_id, $video_url, $details['title'], $details['channel'], $platform]);
     }
 
     $pdo->commit();
-    echo json_encode(['status' => 'success', 'message' => 'Geçmiş ve video detayları bulutla senkronize edildi.']);
+    echo json_encode(['status' => 'success', 'message' => 'Geçmiş başarıyla senkronize edildi.']);
 
 } catch (Exception $e) {
     $pdo->rollBack();
-    echo json_encode(['status' => 'error', 'message' => 'Senkronizasyon veritabanı hatası: ' . $e->getMessage()]);
+    echo json_encode(['status' => 'error', 'message' => 'Senkronizasyon hatası: ' . $e->getMessage()]);
 }
 ?>
