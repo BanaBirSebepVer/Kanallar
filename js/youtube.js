@@ -40,16 +40,22 @@ function createYouTubeEmbed(videoId) {
     container.className = 'video-container';
     
     const embedType = videoId.toLowerCase().includes('live') ? 'live_stream' : 'embed';
-
-    container.innerHTML = `
-            <button class="remove-btn" onclick="removeVideo(this.parentElement)">×</button>
-            <iframe
-                src="https://www.youtube.com/${embedType}/${videoId}?autoplay=1&mute=1"
-                frameborder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowfullscreen>
-            </iframe>
-        `;
+    
+    const button = document.createElement('button');
+    button.className = 'remove-btn';
+    button.textContent = '×';
+    button.onclick = function() {
+        removeVideo(this.parentElement);
+    };
+    
+    const iframe = document.createElement('iframe');
+    iframe.src = `https://www.youtube.com/${embedType}/${encodeURIComponent(videoId)}?autoplay=1&mute=1`;
+    iframe.frameBorder = "0";
+    iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+    iframe.allowFullscreen = true;
+    
+    container.appendChild(button);
+    container.appendChild(iframe);
     
     return container;
 }

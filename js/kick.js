@@ -26,17 +26,23 @@ function createKickEmbed(channelNameKick) {
     const container = document.createElement('div');
     container.className = 'video-container';
     
-    container.innerHTML = `
-        <button class="remove-btn" onclick="removeVideo(this.parentElement)">×</button>
-        <iframe
-            src="https://player.kick.com/${channelNameKick}"
-            frameborder="0"
-            allowfullscreen="true"
-            scrolling="no"
-            height="100%"
-            width="100%">
-        </iframe>
-    `;
+    const button = document.createElement('button');
+    button.className = 'remove-btn';
+    button.textContent = '×';
+    button.onclick = function() {
+        removeVideo(this.parentElement);
+    };
+    
+    const iframe = document.createElement('iframe');
+    iframe.src = `https://player.kick.com/${encodeURIComponent(channelNameKick)}`;
+    iframe.frameBorder = "0";
+    iframe.allowFullscreen = true;
+    iframe.scrolling = "no";
+    iframe.height = "100%";
+    iframe.width = "100%";
+    
+    container.appendChild(button);
+    container.appendChild(iframe);
     
     return container;
 }
