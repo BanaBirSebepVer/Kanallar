@@ -333,3 +333,21 @@ button {
 .logout-btn:hover { 
     background-color: #da190b; 
 }
+
+.history-btn {
+    background: none;
+    color: var(--icon-text);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+}
+#historyList li {
+    padding: 12px;
+    border-bottom: 1px solid var(--input-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}

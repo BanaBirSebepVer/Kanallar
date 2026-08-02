@@ -60,6 +60,9 @@
 
 
         <div class="bg-controls">
+            <!-- Geçmiş Butonu (Başlangıçta Gizli, Giriş Yapınca Görünür) -->
+             <button id="historyBtn" class="history-btn" style="display: none;" onclick="showHistoryModal()"><span class="material-icons icon">history</span></button>
+            <!-- Arka Plan Yükleme Inputu (Gizli) -->
             <input type="file" id="bgImageUpload" accept="image/*" style="display: none;">
             <!-- Arka Plan Yükleme Butonu -->
             <button id="bgUploadBtn"><span class="material-icons icon">image</span></button>
@@ -90,6 +93,18 @@
             <p>Son 30 günde en çok izlenen listeler</p>
             <ul id="leaderboardList">
                 <!-- JavaScript ile API'den gelen veriler buraya eklenecek -->
+            </ul>
+        </div>
+    </div>
+
+    <!-- Geçmiş Modalı -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close-modal" onclick="closeHistoryModal()">&times;</span>
+            <h2>📜 İzleme Geçmişiniz</h2>
+            <p>Bulutta kayıtlı son izleme ve video geçmişiniz</p>
+            <ul id="historyList" style="list-style-type: none; padding: 0; max-height: 400px; overflow-y: auto;">
+                <!-- JavaScript ile API'den gelen geçmiş buraya basılacak -->
             </ul>
         </div>
     </div>

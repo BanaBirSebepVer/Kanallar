@@ -13,8 +13,7 @@ if (!isset($_SESSION['user_id'])) {
 $user_id = $_SESSION['user_id'];
 
 try {
-    // Kullanıcının izleme geçmişini en yeniden eskiye doğru çekiyoruz
-    $stmt = $pdo->prepare("SELECT Video_URL, Platform, Added_At FROM Watch_History WHERE User_ID = ? ORDER BY Added_At DESC LIMIT 50");
+    $stmt = $pdo->prepare("SELECT Video_URL, Video_Title, Channel_Name, Platform, Added_At FROM Watch_History WHERE User_ID = ? ORDER BY Added_At DESC LIMIT 50");
     $stmt->execute([$user_id]);
     $history = $stmt->fetchAll();
 

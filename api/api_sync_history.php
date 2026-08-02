@@ -5,7 +5,6 @@ session_start();
 
 header('Content-Type: application/json');
 
-// Sadece oturum açmış kullanıcılar bu işlemi yapabilir
 if (!isset($_SESSION['user_id'])) {
     echo json_encode(['status' => 'error', 'message' => 'Oturum açmanız gerekiyor.']);
     exit;
@@ -24,41 +23,42 @@ if (!isset($data['history']) || !is_array($data['history'])) {
 }
 
 try {
-    // Veritabanı işlemleri için Transaction başlat
     $pdo->beginTransaction();
 
-    // 1. Kullanıcının eski geçmişini tamamen temizle
+    // 1. Eski geçmişi temizle
     $delete_stmt = $pdo->prepare("DELETE FROM Watch_History WHERE User_ID = ?");
     $delete_stmt->execute([$user_id]);
 
-    // 2. Yeni geçmişi döngü ile ekle
-    $insert_stmt = $pdo->prepare("INSERT INTO Watch_History (User_ID, Video_URL, Platform) VALUES (?, ?, ?)");
+    // 2. Yeni geçmişi başlık ve kanal bilgileriyle birlikte ekle
+    $insert_stmt = $pdo->prepare("INSERT INTO Watch_History (User_ID, Video_URL, Video_Title, Channel_Name, Platform) VALUES (?, ?, ?, ?, ?)");
     
-    foreach ($data['history'] as $video) {
-        // URL'den platformu güvenli bir şekilde tespit et
+    foreach ($data['history'] as $item) {
+        $video_url = isset($item['url']) ? $item['url'] : '';
+        $video_title = isset($item['title']) ? $item['title'] : 'Bilinmeyen Video';
+        $channel_name = isset($item['channel']) ? $item['channel'] : 'Bilinmeyen Kanal';
+        
+        if (empty($video_url)) continue;
+
+        // Platformu tespit et
         $platform = 'unknown';
+        $lower_url = strtolower($video_url);
         
-        // Küçük harfe çevirerek arama yapıyoruz ki büyük/küçük harf sorunları yaşanmasın
-        $lower_video = strtolower($video);
-        
-        if (strpos($lower_video, 'youtube.com') !== false || strpos($lower_video, 'youtu.be') !== false) {
+        if (strpos($lower_url, 'youtube.com') !== false || strpos($lower_url, 'youtu.be') !== false) {
             $platform = 'youtube';
-        } elseif (strpos($lower_video, 'twitch.tv') !== false || strpos($lower_video, 'player.twitch.tv') !== false) {
+        } elseif (strpos($lower_url, 'twitch.tv') !== false || strpos($lower_url, 'player.twitch.tv') !== false) {
             $platform = 'twitch';
-        } elseif (strpos($lower_video, 'kick.com') !== false || strpos($lower_video, 'player.kick.com') !== false) {
+        } elseif (strpos($lower_url, 'kick.com') !== false || strpos($lower_url, 'player.kick.com') !== false) {
             $platform = 'kick';
         }
 
-        $insert_stmt->execute([$user_id, $video, $platform]);
+        $insert_stmt->execute([$user_id, $video_url, $video_title, $channel_name, $platform]);
     }
 
-    // İşlemleri onayla
     $pdo->commit();
-    echo json_encode(['status' => 'success', 'message' => 'Geçmiş bulutla senkronize edildi.']);
+    echo json_encode(['status' => 'success', 'message' => 'Geçmiş ve video detayları bulutla senkronize edildi.']);
 
 } catch (Exception $e) {
-    // Hata olursa tüm işlemleri geri al
     $pdo->rollBack();
-    echo json_encode(['status' => 'error', 'message' => 'Senkronizasyon hatası.']);
+    echo json_encode(['status' => 'error', 'message' => 'Senkronizasyon veritabanı hatası: ' . $e->getMessage()]);
 }
 ?>
