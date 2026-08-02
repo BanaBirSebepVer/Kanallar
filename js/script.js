@@ -398,11 +398,8 @@ function checkAuthStatus() {
 
 // --- DİNAMİK VERSİYON ÇEKME FONKSİYONU ---
 function fetchVersionFromGitHub() {
-    // 1. DÜZELTME: Kullanıcı adınızdaki harf eksikliğini (varsa) giderin
     const repoOwner = 'BanaBirSebepVer'; 
     const repoName = 'Kanallar';
-    
-    // 2. DÜZELTME: Dal adınız 'main' değilse burayı 'master' olarak değiştirin
     const branch = 'main'; 
 
     fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/commits/${branch}`)
@@ -411,11 +408,12 @@ function fetchVersionFromGitHub() {
             return res.json();
         })
         .then(data => {
-            if (data.sha) {
+            if (data.sha && data.html_url) {
                 const versionElement = document.getElementById('appVersion');
                 if (versionElement) {
                     const shortSha = data.sha.substring(0, 7);
-                    versionElement.textContent = `Versiyon ${shortSha}`; 
+                    // Metni <a> etiketiyle sararak tıklanabilir hale getiriyoruz
+                    versionElement.innerHTML = `<a href="${data.html_url}" target="_blank" style="color: inherit; text-decoration: none; border-bottom: 1px dashed currentColor;">Versiyon ${shortSha}</a>`; 
                 }
             }
         })
