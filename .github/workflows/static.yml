@@ -22,3 +22,4 @@ jobs:
             .github/**
             README.md
             SECURITY.md
+            mysql.sql
