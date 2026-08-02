@@ -65,13 +65,26 @@ function createYouTubeEmbed(videoId) {
 
 // YouTube oEmbed API'sini kullanarak video başlığını ve kanal adını çeker
 function fetchYouTubeDetails(videoId, iframeElement, saveToStorage) {
-    const apiUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+    // YouTube'un kendi oembed'i tarayıcıdan (CORS) gelen istekleri 401 ile reddedebilir.
+    // Bu yüzden güvenilir ve CORS destekli 'noembed' API'sini kullanıyoruz.
+    const apiUrl = `https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`;
     
     fetch(apiUrl)
-        .then(response => response.json())
+        .then(response => {
+            // Eğer sunucu 200 (Başarılı) dışında bir yanıt dönerse hata fırlat ve çökmesini engelle
+            if (!response.ok) {
+                throw new Error(`Ağ hatası: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
-            if (data.title) iframeElement.setAttribute('data-title', data.title);
-            if (data.author_name) iframeElement.setAttribute('data-channel', data.author_name);
+            // Noembed API'si video gizliyse veya silinmişse 'error' objesi döner
+            if (data.error) {
+                console.warn('Video detayları alınamadı (Video gizli veya silinmiş olabilir).');
+            } else {
+                if (data.title) iframeElement.setAttribute('data-title', data.title);
+                if (data.author_name) iframeElement.setAttribute('data-channel', data.author_name);
+            }
             
             // Bilgiler iframe'e yazıldıktan sonra depolamaya kaydet
             if (saveToStorage) {
@@ -79,8 +92,8 @@ function fetchYouTubeDetails(videoId, iframeElement, saveToStorage) {
             }
         })
         .catch(err => {
-            console.error('YouTube bilgileri çekilemedi:', err);
-            // Hata olsa bile URL'yi kaydetmek için çağırıyoruz
+            console.error('Video bilgileri çekilemedi:', err);
+            // Başlık çekilmese bile videonun (Bilinmeyen Video olarak) kaydedilmesi için çağırıyoruz
             if (saveToStorage) saveVideosToStorage();
         });
 }
