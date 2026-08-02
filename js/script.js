@@ -398,7 +398,7 @@ function checkAuthStatus() {
 
 // --- DİNAMİK VERSİYON ÇEKME FONKSİYONU ---
 function fetchVersionFromGitHub() {
-    const repoOwner = 'BanBirSebepVer'; 
+    const repoOwner = 'BanaBirSebepVer'; 
     const repoName = 'Kanallar';
 
     // main dalındaki (branch) son gönderiyi (commit) çeker
