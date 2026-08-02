@@ -1,0 +1,36 @@
+.
+├── .github
+│   ├── workflow
+│   │   └── static.yml
+│   ├── FUNDING.yml
+├── .gitignore
+├── LICENSE
+├── README.md
+├── SECURITY.md
+├── .env
+├── api
+│   ├── api_check_auth.php
+│   ├── api_get_history.php
+│   ├── api_get_list.php
+│   ├── api_leaderboard.php
+│   ├── api_login.php
+│   ├── api_logout.php
+│   ├── api_share.php
+│   ├── api_sync_history.php
+│   ├── api_view.php
+│   └── db.php
+├── imaj
+│   ├── background.png
+│   ├── favicon.png
+│   ├── featuredimage.png
+│   ├── v1.1.png
+│   └── v1.3.png
+├── index.php
+├── js
+│   ├── kick.js
+│   ├── script.js
+│   ├── twitch.js
+│   └── youtube.js
+├── mysql.sql
+└── styles.css
+

@@ -34,14 +34,18 @@ try {
     // 2. Yeni geçmişi dış API KULLANMADAN kendi belirlediğimiz değerlerle ekle
     $insert_stmt = $pdo->prepare("INSERT INTO Watch_History (User_ID, Video_URL, Video_Title, Channel_Name, Platform) VALUES (?, ?, ?, ?, ?)");
     
-    foreach ($data['history'] as $video_url) {
-        if (empty($video_url)) continue;
+    foreach ($data['history'] as $item) {
+        // Gelen veri bazen düz metin (URL), bazen de obje ({url: "...", title: "..."}) olabilir. 
+        // Bunu tespit edip sadece URL'yi alıyoruz:
+        $video_url = is_array($item) ? (isset($item['url']) ? $item['url'] : '') : $item;
+        
+        if (empty($video_url) || !is_string($video_url)) continue;
 
         $platform = 'unknown';
         $title = 'Bilinmeyen İçerik';
-        $channel = 'Bilinmeyen Kanal'; // Dış API yasak olduğu için sabit değer kullanıyoruz
+        $channel = 'Bilinmeyen Kanal'; 
         
-        $lower_url = strtolower($video_url);
+        $lower_url = strtolower($video_url); // Artık $video_url kesinlikle bir string, çökme olmaz.
         
         // Sadece URL içindeki metinlere bakarak platformu ve genel başlığı belirliyoruz
         if (strpos($lower_url, 'youtube.com') !== false || strpos($lower_url, 'youtu.be') !== false) {
@@ -55,7 +59,6 @@ try {
             $title = 'Kick Yayını';
         }
 
-        // Dış API bağlantısı YOK. Doğrudan veritabanına yazılıyor.
         $insert_stmt->execute([$user_id, $video_url, $title, $channel, $platform]);
     }
 

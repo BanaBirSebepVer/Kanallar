@@ -26,3 +26,4 @@ jobs:
             SECURITY.md
             mysql.sql
             .env-EXAMPLE
+            Kanallar.txt
