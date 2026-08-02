@@ -10,15 +10,14 @@ function handleYouTubeVideo(url, saveToStorage = true) {
     videos.push(container);
     videoGrid.appendChild(container);
 
-    if (saveToStorage) {
-        saveVideosToStorage();
-    }
+    // Videonun detaylarını (başlık ve kanal adı) çekip iframe'e ekle
+    fetchYouTubeDetails(videoId, container.querySelector('iframe'), saveToStorage);
 }
 
 // YouTube video bağlantısından doğru video ID'sini alıyoruz
 function extractYouTubeId(url) {
     const patterns = [
-        /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/, /// YouTube video formatı
+        /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/, // YouTube video formatı
         /^.*(?:youtube.com\/live\/)([^#&?]*).*/,  // Canlı yayın formatı
         /^.*(?:youtube.com\/shorts\/)([^#&?]*).*/  // YouTube Shorts formatı
     ];
@@ -54,8 +53,34 @@ function createYouTubeEmbed(videoId) {
     iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
     iframe.allowFullscreen = true;
     
+    // Geçici olarak bilinmeyen değerleri ata, API'den yanıt gelince bunlar güncellenecek
+    iframe.setAttribute('data-title', 'Bilinmeyen Video');
+    iframe.setAttribute('data-channel', 'Bilinmeyen Kanal');
+    
     container.appendChild(button);
     container.appendChild(iframe);
     
     return container;
+}
+
+// YouTube oEmbed API'sini kullanarak video başlığını ve kanal adını çeker
+function fetchYouTubeDetails(videoId, iframeElement, saveToStorage) {
+    const apiUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+    
+    fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+            if (data.title) iframeElement.setAttribute('data-title', data.title);
+            if (data.author_name) iframeElement.setAttribute('data-channel', data.author_name);
+            
+            // Bilgiler iframe'e yazıldıktan sonra depolamaya kaydet
+            if (saveToStorage) {
+                saveVideosToStorage();
+            }
+        })
+        .catch(err => {
+            console.error('YouTube bilgileri çekilemedi:', err);
+            // Hata olsa bile URL'yi kaydetmek için çağırıyoruz
+            if (saveToStorage) saveVideosToStorage();
+        });
 }
