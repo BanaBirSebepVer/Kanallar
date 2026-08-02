@@ -144,6 +144,280 @@ function loadSavedBackground() {
 //
 window.addEventListener('DOMContentLoaded', () => {
     initTheme();
-    loadVideosFromStorage();
+    // Sayfa yüklendiğinde ilk iş oturumu kontrol et
+    checkAuthStatus();
+    // GitHub'dan sürüm bilgisini çek
+    fetchVersionFromGitHub();
+    
+    // Eğer URL'de liste varsa onu yükle, yoksa localStorage'daki yerel videoları yükle
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('list')) {
+        checkSharedListInUrl();
+    } else {
+        loadVideosFromStorage();
+    }
+    
     loadSavedBackground();
 });
+
+
+// Google Giriş işlemi tamamlandığında tetiklenen fonksiyon
+function handleCredentialResponse(response) {
+    const id_token = response.credential;
+
+    fetch('api/api_login.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ credential: id_token })
+    })
+    .then(res => {
+        // Yanıtın JSON olup olmadığını kontrol etmek için önce düz metin (text) olarak alıyoruz
+        return res.text().then(text => {
+            try {
+                // Eğer geçerli bir JSON ise parse et
+                return JSON.parse(text);
+            } catch (err) {
+                // Eğer JSON değilse, PHP tarafında bir hata var demektir! Ekrana PHP hatasını bas.
+                console.error("PHP'den gelen hatalı yanıt:", text);
+                throw new Error("Sunucudan JSON formatında olmayan bir yanıt geldi. Lütfen konsolu (F12) kontrol edin.");
+            }
+        });
+    })
+    .then(data => {
+        if (data.status === 'success') {
+            console.log('Sisteme giriş başarılı.');
+            syncHistoryToCloud();
+            document.querySelector('.g_id_signin').style.display = 'none';
+            checkAuthStatus(); // Durumu güncelle
+        } else {
+            alert('Giriş yapılamadı: ' + data.message);
+        }
+    })
+    .catch(err => {
+        alert('Sunucu bağlantı hatası: ' + err.message);
+        console.error('Detaylı Hata:', err);
+    });
+}
+
+// Yerel geçmişi (localStorage) buluta eşitleme fonksiyonu
+function syncHistoryToCloud() {
+    const savedVideos = localStorage.getItem('videos');
+    if (!savedVideos) return; // Yerelde geçmiş yoksa işlem yapma
+
+    fetch('api/api_sync_history.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ history: JSON.parse(savedVideos) })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            console.log('Yerel geçmişiniz başarıyla buluta aktarıldı.');
+        } else {
+            console.error('Senkronizasyon hatası:', data.message);
+        }
+    });
+}
+
+
+// URL'de "list" parametresi olup olmadığını kontrol eden ve listeyi yükleyen fonksiyon
+function checkSharedListInUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const listId = urlParams.get('list');
+
+    if (listId) {
+        fetch(`api/api_get_list.php?id=${listId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Mevcut videoları temizle
+                    videos = [];
+                    videoGrid.innerHTML = ''; 
+                    
+                    // Gelen JSON dizisindeki videoları ekrana bas
+                    data.data.forEach(url => {
+                        if (url.includes('kick.com')) handleKickVideo(url, false);
+                        else if (url.includes('youtube.com') || url.includes('youtu.be')) handleYouTubeVideo(url, false);
+                        else if (url.includes('twitch.tv')) handleTwitchVideo(url, false);
+                    });
+
+                    // Görüntülenme sayısını artırmak (Anti-spam kurallarıyla) için sunucuya bildir
+                    recordListView(listId);
+                } else {
+                    alert('Hata: ' + data.message);
+                }
+            })
+            .catch(err => console.error('Liste yüklenirken hata:', err));
+    }
+}
+
+// Listeye girildiğinde görüntülenmeyi tetikleyen fonksiyon
+function recordListView(listId) {
+    fetch('api/api_view.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ list_id: listId })
+    });
+}
+
+// Kullanıcıyı çıkış yaptıran fonksiyon
+function logoutUser() {
+    fetch('api/api_logout.php')
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                console.log('Başarıyla çıkış yapıldı.');
+                // Giriş butonunu tekrar görünür yap
+                const signinBtn = document.querySelector('.g_id_signin');
+                if (signinBtn) signinBtn.style.display = 'block';
+                
+                // İsteğe bağlı: Çıkış yapınca sayfayı yenile
+                window.location.reload();
+            }
+        });
+}
+
+
+
+// --- LİSTE PAYLAŞMA FONKSİYONU ---
+function shareCurrentList() {
+    // Ekranda video yoksa uyarı ver
+    const iframes = document.querySelectorAll('.video-container iframe');
+    if (iframes.length === 0) {
+        alert('Paylaşılacak bir video bulunamadı. Lütfen önce video ekleyin.');
+        return;
+    }
+
+    // İframe'lerden URL'leri topla
+    const currentVideos = Array.from(iframes).map(iframe => {
+        const src = iframe.getAttribute('src');
+        if (src.includes('player.kick.com')) return `https://kick.com/${src.split('player.kick.com/')[1]}`;
+        if (src.includes('youtube.com')) return `https://youtube.com/watch?v=${src.match(/embed\/([^?]+)/)?.[1]}`;
+        if (src.includes('twitch.tv')) return `https://twitch.tv/${src.match(/channel=([^&]+)/)?.[1]}`;
+        return null;
+    }).filter(url => url !== null);
+
+    // API'ye gönder
+    fetch('api/api_share.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videos: currentVideos })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            const shareUrl = `${window.location.origin}${window.location.pathname}?list=${data.list_id}`;
+            
+            // Panoya otomatik kopyalama (Modern Tarayıcılar İçin)
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                alert('Liste bağlantısı başarıyla kopyalandı:\n' + shareUrl);
+            }).catch(err => {
+                // Eğer pano kopyalaması başarısız olursa manuel kopya için ekranda göster
+                prompt('Bağlantıyı kopyalamak için Ctrl+C / Cmd+C yapın:', shareUrl);
+            });
+        } else {
+            alert('Paylaşım hatası: ' + data.message);
+        }
+    })
+    .catch(err => console.error('Paylaşım işleminde hata:', err));
+}
+
+// --- LİDER TABLOSU FONKSİYONLARI ---
+function showLeaderboard() {
+    const modal = document.getElementById('leaderboardModal');
+    const listElement = document.getElementById('leaderboardList');
+    
+    // Yükleniyor uyarısı
+    listElement.innerHTML = '<li>Veriler yükleniyor...</li>';
+    modal.style.display = 'block';
+
+    fetch('api/api_leaderboard.php')
+        .then(res => res.json())
+        .then(data => {
+            listElement.innerHTML = ''; // Temizle
+            
+            if (data.status === 'success' && data.data.length > 0) {
+                data.data.forEach((item, index) => {
+                    const li = document.createElement('li');
+                    const link = `${window.location.origin}${window.location.pathname}?list=${item.List_ID}`;
+                    li.innerHTML = `
+                        <span><strong>#${index + 1}</strong> <a href="${link}">Liste: ${item.List_ID.substring(0,8)}...</a></span>
+                        <span>👁️ ${item.Total_Views} İzlenme</span>
+                    `;
+                    listElement.appendChild(li);
+                });
+            } else {
+                listElement.innerHTML = '<li>Henüz yeterli veri yok.</li>';
+            }
+        })
+        .catch(err => {
+            listElement.innerHTML = '<li>Tablo yüklenirken bir hata oluştu.</li>';
+            console.error('Lider tablosu hatası:', err);
+        });
+}
+
+function closeLeaderboard() {
+    document.getElementById('leaderboardModal').style.display = 'none';
+}
+
+// Modal dışına tıklandığında pencereyi kapatma özelliği
+window.onclick = function(event) {
+    const modal = document.getElementById('leaderboardModal');
+    if (event.target === modal) {
+        modal.style.display = 'none';
+    }
+}
+
+
+// Oturum durumunu kontrol edip butonları düzenleyen fonksiyon
+function checkAuthStatus() {
+    fetch('api/api_check_auth.php')
+        .then(res => res.json())
+        .then(data => {
+            const signinBtn = document.querySelector('.g_id_signin');
+            const logoutBtn = document.getElementById('logoutBtn');
+            
+            if (data.logged_in) {
+                // Giriş yapılmışsa Google butonunu gizle, Çıkış butonunu göster
+                if (signinBtn) signinBtn.style.display = 'none';
+                if (logoutBtn) logoutBtn.style.display = 'flex';
+            } else {
+                // Giriş yapılmamışsa tam tersi
+                if (signinBtn) signinBtn.style.display = 'block';
+                if (logoutBtn) logoutBtn.style.display = 'none';
+            }
+        })
+        .catch(err => console.error('Oturum kontrol hatası:', err));
+}
+
+
+
+// --- DİNAMİK VERSİYON ÇEKME FONKSİYONU ---
+function fetchVersionFromGitHub() {
+    const repoOwner = 'BanBirSebepVer'; 
+    const repoName = 'Kanallar';
+
+    // main dalındaki (branch) son gönderiyi (commit) çeker
+    fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/commits/main`)
+        .then(res => {
+            if (!res.ok) throw new Error('Commit bilgisi bulunamadı');
+            return res.json();
+        })
+        .then(data => {
+            if (data.sha) {
+                const versionElement = document.getElementById('appVersion');
+                if (versionElement) {
+                    // Commit kodunun ilk 7 hanesini (Örn: Build a1b2c3d) ekrana basar
+                    const shortSha = data.sha.substring(0, 7);
+                    versionElement.textContent = `Build ${shortSha}`; 
+                }
+            }
+        })
+        .catch(err => {
+            console.error('GitHub API Hatası:', err);
+        });
+}

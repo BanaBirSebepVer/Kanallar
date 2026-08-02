@@ -28,6 +28,7 @@
 
     gtag('config', 'G-F2SS5LY6B1');
     </script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 
 
 </head>
@@ -36,6 +37,19 @@
         <form id="addChannelForm">
             <input type="text" id="videoUrl" placeholder="Video bağlantısı ekleyin" required>
             <button type="submit">Ekle</button>
+            <!-- Paylaş Butonu -->
+            <button type="button" id="shareListBtn" class="share-btn" onclick="shareCurrentList()"><span class="material-icons">share</span> Paylaş</button>
+            <!-- Çıkış Yap Butonu (Başlangıçta Gizli) -->
+            <button type="button" id="logoutBtn" class="logout-btn" style="display: none;" onclick="logoutUser()"><span class="material-icons">logout</span> Çıkış Yap</button>
+
+            <!-- <nav class="navbar"> içine veya uygun bir yere eklenecek buton yapısı: -->
+            <div id="g_id_onload"
+                data-client_id="<?php echo parse_ini_file(__DIR__ . '/.env')['GOOGLE_CLIENT_ID']; ?>"
+                data-callback="handleCredentialResponse"
+                data-auto_prompt="false">
+            </div>
+            <div class="g_id_signin" data-type="standard" data-theme="outline" data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left"></div>
+
         </form>
     </nav>
     <div class="container">
@@ -44,10 +58,12 @@
     <footer class="footer">
         <p>© 2025 Bana Bir Sebep Ver</p>
 
+
         <div class="bg-controls">
             <input type="file" id="bgImageUpload" accept="image/*" style="display: none;">
             <button id="bgUploadBtn"><span class="material-icons icon">image</span></button>
             <button id="resetBgBtn"><span class="material-icons icon">refresh</span></button>
+            <button id="leaderboardBtn" class="leaderboard-btn" onclick="showLeaderboard()"><span class="material-icons">leaderboard</span></button>
         </div>
 
         <div class="theme-selector">
@@ -57,11 +73,25 @@
                 <option value="auto">🔄 Otomatik</option>
             </select>
         </div> 
-        <span class="version">v1.3.2</span>
+        <span class="version" id="appVersion">Sürüm aranıyor...</span>
     </footer>
     <script src="js/script.js"></script>
     <script src="js/youtube.js"></script>
     <script src="js/twitch.js"></script>
     <script src="js/kick.js"></script>
+
+    <!-- Lider Tablosu Modalı -->
+    <div id="leaderboardModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeLeaderboard()">&times;</span>
+            <h2>🏆 Aylık Lider Tablosu</h2>
+            <p>Son 30 günde en çok izlenen listeler</p>
+            <ul id="leaderboardList">
+                <!-- JavaScript ile API'den gelen veriler buraya eklenecek -->
+            </ul>
+        </div>
+    </div>
+
+
 </body>
 </html>
