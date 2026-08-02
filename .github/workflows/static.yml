@@ -25,3 +25,4 @@ jobs:
             README.md
             SECURITY.md
             mysql.sql
+            .env-EXAMPLE
