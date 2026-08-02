@@ -47,9 +47,9 @@ Not: Güvenliğiniz için .env dosyasının GitHub'a yüklenmemesi adına .gitig
 
 ### 3. Otomatik Dağıtım (GitHub Actions ile FTP)
 Projeyi her gönderimde (push) otomatik olarak sunucunuza yüklemek için GitHub deponuzda Settings > Secrets and variables > Actions yolunu izleyin ve şu değişkenleri (Repository secrets) tanımlayın:
-FTP_SERVER: Sunucu IP adresiniz veya ana host adınız
-FTP_USERNAME: FTP kullanıcı adınız
-FTP_PASSWORD: FTP şifreniz
+> FTP_SERVER: Sunucu IP adresiniz veya ana host adınız
+> FTP_USERNAME: FTP kullanıcı adınız
+> FTP_PASSWORD: FTP şifreniz
 
 
 ## Kullanılan Teknolojiler
