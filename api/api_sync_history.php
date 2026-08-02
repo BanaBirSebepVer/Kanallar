@@ -35,11 +35,19 @@ try {
     $insert_stmt = $pdo->prepare("INSERT INTO Watch_History (User_ID, Video_URL, Platform) VALUES (?, ?, ?)");
     
     foreach ($data['history'] as $video) {
-        // URL'den platformu tespit et
+        // URL'den platformu güvenli bir şekilde tespit et
         $platform = 'unknown';
-        if (strpos($video, 'youtube.com') !== false || strpos($video, 'youtu.be') !== false) $platform = 'youtube';
-        elseif (strpos($video, 'twitch.tv') !== false) $platform = 'twitch';
-        elseif (strpos($video, 'kick.com') !== false) $platform = 'kick';
+        
+        // Küçük harfe çevirerek arama yapıyoruz ki büyük/küçük harf sorunları yaşanmasın
+        $lower_video = strtolower($video);
+        
+        if (strpos($lower_video, 'youtube.com') !== false || strpos($lower_video, 'youtu.be') !== false) {
+            $platform = 'youtube';
+        } elseif (strpos($lower_video, 'twitch.tv') !== false || strpos($lower_video, 'player.twitch.tv') !== false) {
+            $platform = 'twitch';
+        } elseif (strpos($lower_video, 'kick.com') !== false || strpos($lower_video, 'player.kick.com') !== false) {
+            $platform = 'kick';
+        }
 
         $insert_stmt->execute([$user_id, $video, $platform]);
     }
