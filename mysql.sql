@@ -14,6 +14,8 @@ CREATE TABLE `Watch_History` (
   `ID` int(11) NOT NULL AUTO_INCREMENT,
   `User_ID` int(11) NOT NULL,
   `Video_URL` text NOT NULL,
+  `Video_Title` VARCHAR(255) DEFAULT 'Bilinmeyen Video',
+  `Channel_Name` VARCHAR(100) DEFAULT 'Bilinmeyen Kanal',
   `Platform` varchar(50) NOT NULL COMMENT 'youtube, twitch, kick',
   `Added_At` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`ID`),
@@ -43,3 +45,4 @@ CREATE TABLE `List_Views` (
   KEY `ip_time_idx` (`IP_Hash`,`View_Date`),
   CONSTRAINT `fk_views_list` FOREIGN KEY (`List_ID`) REFERENCES `Shared_Lists` (`List_ID`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
