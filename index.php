@@ -97,17 +97,20 @@
         </div>
     </div>
 
-    <!-- Geçmiş Modalı -->
-    <div id="historyModal" class="modal">
-        <div class="modal-content" style="max-width: 600px;">
-            <span class="close-modal" onclick="closeHistoryModal()">&times;</span>
+    <!-- Geçmiş Sidebar (Yan Menü) -->
+    <div id="historySidebar" class="sidebar">
+        <div class="sidebar-header">
             <h2>📜 İzleme Geçmişiniz</h2>
-            <p>Bulutta kayıtlı son izleme ve video geçmişiniz</p>
-            <ul id="historyList" style="list-style-type: none; padding: 0; max-height: 400px; overflow-y: auto;">
-                <!-- JavaScript ile API'den gelen geçmiş buraya basılacak -->
-            </ul>
+            <span class="close-sidebar" onclick="closeHistorySidebar()">&times;</span>
         </div>
+        <p class="sidebar-desc">Bulutta kayıtlı son izleme ve video geçmişiniz</p>
+        <ul id="historyList" class="sidebar-list">
+            <!-- JavaScript ile API'den gelen veriler buraya eklenecek -->
+        </ul>
     </div>
+    
+    <!-- Sidebar açıkken arka planı karartan örtü -->
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeHistorySidebar()"></div>
 
 
 </body>

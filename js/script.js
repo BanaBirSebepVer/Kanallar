@@ -333,12 +333,18 @@ function closeLeaderboard() {
     document.getElementById('leaderboardModal').style.display = 'none';
 }
 
-function showHistoryModal() {
-    const modal = document.getElementById('historyModal');
+// --- GEÇMİŞ SİDEBAR FONKSİYONLARI ---
+function showHistorySidebar() {
+    const sidebar = document.getElementById('historySidebar');
+    const overlay = document.getElementById('sidebarOverlay');
     const listElement = document.getElementById('historyList');
     
-    listElement.innerHTML = '<li>Geçmiş yükleniyor...</li>';
-    modal.style.display = 'block';
+    // Yükleniyor durumu
+    listElement.innerHTML = '<li style="justify-content: center; padding: 20px;">Geçmiş yükleniyor...</li>';
+    
+    // Sidebar'ı ve Örtüyü göster
+    sidebar.classList.add('open');
+    overlay.style.display = 'block';
 
     fetch('api/api_get_history.php')
         .then(res => res.json())
@@ -349,40 +355,45 @@ function showHistoryModal() {
                 data.data.forEach(item => {
                     const li = document.createElement('li');
                     li.innerHTML = `
-                        <div>
-                            <strong>${item.Video_Title}</strong><br>
+                        <div style="flex: 1; margin-right: 15px;">
+                            <strong style="font-size: 1.1rem; display: block; margin-bottom: 5px;">${item.Video_Title}</strong>
                             <small style="color: gray;">Kanal: ${item.Channel_Name} | Platform: ${item.Platform}</small><br>
-                            <a href="${item.Video_URL}" target="_blank" style="font-size: 12px; color: #007bff;">${item.Video_URL}</a>
+                            <a href="${item.Video_URL}" target="_blank" style="font-size: 13px; color: #007bff; text-decoration: none; word-break: break-all;">${item.Video_URL}</a>
                         </div>
-                        <span style="font-size: 11px; color: #888;">${item.Added_At}</span>
+                        <span style="font-size: 12px; color: #888; min-width: 110px; text-align: right;">${item.Added_At}</span>
                     `;
                     listElement.appendChild(li);
                 });
             } else {
-                listElement.innerHTML = '<li>Henüz kayıtlı geçmişiniz yok veya oturum açmadınız.</li>';
+                listElement.innerHTML = '<li style="justify-content: center; color: gray;">Henüz kayıtlı geçmişiniz yok.</li>';
             }
         })
         .catch(err => {
-            listElement.innerHTML = '<li>Geçmiş yüklenirken bir hata oluştu.</li>';
+            listElement.innerHTML = '<li style="color: #ff4d4d;">Geçmiş yüklenirken bir hata oluştu.</li>';
             console.error('Geçmiş hatası:', err);
         });
 }
 
-function closeHistoryModal() {
-    document.getElementById('historyModal').style.display = 'none';
+function closeHistorySidebar() {
+    const sidebar = document.getElementById('historySidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    
+    sidebar.classList.remove('open');
+    // Animasyonun bitmesini bekleyip overlay'i gizle
+    setTimeout(() => {
+        overlay.style.display = 'none';
+    }, 300);
 }
 
+// Lider tablosu modalı için tıklama kontrolü (Geçmiş modalı kaldırıldı)
 window.onclick = function(event) {
     const leaderboardModal = document.getElementById('leaderboardModal');
-    const historyModal = document.getElementById('historyModal');
     if (event.target === leaderboardModal) {
         leaderboardModal.style.display = 'none';
     }
-    if (event.target === historyModal) {
-        historyModal.style.display = 'none';
-    }
 };
 
+// Oturum durumu kontrolü (Sadece historyBtn onclick fonksiyonunu güncelledik)
 function checkAuthStatus() {
     fetch('api/api_check_auth.php')
         .then(res => res.json())
@@ -392,6 +403,9 @@ function checkAuthStatus() {
             const historyBtn = document.getElementById('historyBtn');
             
             isAuthenticated = data.logged_in; 
+            
+            // Eğer butonda eski onclick varsa onu yeni fonksiyonla değiştirelim
+            if (historyBtn) historyBtn.onclick = showHistorySidebar;
             
             if (data.logged_in) {
                 if (signinBtn) signinBtn.style.display = 'none';
