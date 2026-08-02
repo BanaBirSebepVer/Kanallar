@@ -3,6 +3,7 @@ const videoGrid = document.getElementById('videoGrid'); // Izgara alanı
 const addChannelForm = document.getElementById('addChannelForm'); // Form elementini alıyoruz
 const MAX_VIDEOS = 12; // Maksimum video sayısı
 let videos = []; // Video dizisi
+let isAuthenticated = false; // YENİ: Oturum durumunu takip edeceğimiz değişken
 
 // Temalar için elementleri alıyoruz
 function toggleTheme(theme) {
@@ -94,6 +95,10 @@ function saveVideosToStorage() {
     }).filter(item => item !== null);
     
     localStorage.setItem('videos', JSON.stringify(videoDataList));
+    // Eğer kullanıcı giriş yapmışsa, yeni eklenen/silinen videoyu anında DB'ye (buluta) gönder
+    if (isAuthenticated) {
+        syncHistoryToCloud();
+    }
 }
 
 function loadVideosFromStorage() {
@@ -412,14 +417,19 @@ function checkAuthStatus() {
             const logoutBtn = document.getElementById('logoutBtn');
             const historyBtn = document.getElementById('historyBtn');
             
+            isAuthenticated = data.logged_in; // Durumu değişkene kaydet
+            
             if (data.logged_in) {
                 if (signinBtn) signinBtn.style.display = 'none';
                 if (logoutBtn) logoutBtn.style.display = 'flex';
-                if (historyBtn) historyBtn.style.display = 'flex'; // Giriş yapınca Geçmiş butonunu göster
+                if (historyBtn) historyBtn.style.display = 'flex'; 
+                
+                // Sayfa yüklendiğinde kullanıcı zaten giriş yapmışsa geçmişi bulutla eşitle
+                syncHistoryToCloud(); 
             } else {
                 if (signinBtn) signinBtn.style.display = 'block';
                 if (logoutBtn) logoutBtn.style.display = 'none';
-                if (historyBtn) historyBtn.style.display = 'none'; // Giriş yapılmamışsa gizle
+                if (historyBtn) historyBtn.style.display = 'none'; 
             }
         })
         .catch(err => console.error('Oturum kontrol hatası:', err));
